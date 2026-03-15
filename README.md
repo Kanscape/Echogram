@@ -46,7 +46,7 @@ For local Docker builds during development, use the override file:
 
 The repository includes `.github/workflows/publish-images.yml`, which builds and pushes:
 
-- `ghcr.io/Kanscape/echogram-backend`
-- `ghcr.io/Kanscape/echogram-web`
+- `ghcr.io/kanscape/echogram-backend`
+- `ghcr.io/kanscape/echogram-web`
 
 The workflow runs on pushes to `main`, version tags like `v1.0.0`, and manual dispatch.
