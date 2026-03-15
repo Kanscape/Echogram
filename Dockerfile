@@ -1,23 +1,28 @@
 FROM python:3.10-slim
 
-# 安装系统依赖 (ffmpeg)
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TZ=Asia/Shanghai
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# 设置时区
-ENV TZ=Asia/Shanghai
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# 安装依赖
-COPY requirements.txt .
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制源码
-COPY . .
+COPY backend ./backend
+COPY config ./config
+COPY core ./core
+COPY extractors ./extractors
+COPY models ./models
+COPY utils ./utils
+COPY main.py ./
 
-# 创建数据目录 (用于挂载 Volume)
-RUN mkdir -p /app/data
+RUN mkdir -p /app/data /app/logs
 
-# 启动命令
+EXPOSE 8765
+
 CMD ["python", "main.py"]

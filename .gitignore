@@ -28,6 +28,14 @@ env/
 ENV/
 .env
 
+# Dart / Jaspr
+.dart_tool/
+.jaspr/
+node_modules/
+coverage/
+!apps/**/lib/
+!packages/**/lib/
+
 # Database
 *.db
 *.sqlite3

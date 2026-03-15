@@ -1,24 +1,54 @@
 services:
-  echogram:
-    # 强制本地构建
-    build: .
-    image: echogram:latest
-    container_name: echogram
+  echogram-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: echogram-backend:latest
+    container_name: echogram-backend
     restart: unless-stopped
-    
-    # 环境变量配置
     env_file:
       - .env
-    
-    # 数据持久化
-    # 仅挂载 data 目录，让程序在目录内创建 echogram.db
-    # 避免挂载不存在的单文件导致被识别为目录
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      WEB_DASHBOARD_HOST: 0.0.0.0
+      WEB_DASHBOARD_PORT: 8765
+      WEB_DASHBOARD_UI_URL: ${WEB_DASHBOARD_UI_URL:-http://localhost:8080/dashboard}
+      WEB_DASHBOARD_AUTO_OPEN: "false"
+    ports:
+      - "127.0.0.1:${ECHOGRAM_API_PORT:-8765}:8765"
     volumes:
       - ./data:/app/data
-
-    # 日志配置
+      - ./logs:/app/logs
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/health').read()"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     logging:
-      driver: "json-file"
+      driver: json-file
       options:
-        max-size: "10m"
+        max-size: 10m
+        max-file: "3"
+
+  echogram-web:
+    build:
+      context: .
+      dockerfile: apps/echogram_web/Dockerfile
+    image: echogram-web:latest
+    container_name: echogram-web
+    restart: unless-stopped
+    depends_on:
+      echogram-backend:
+        condition: service_healthy
+    ports:
+      - "${ECHOGRAM_WEB_PORT:-8080}:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
         max-file: "3"

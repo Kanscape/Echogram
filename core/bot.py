@@ -3,6 +3,7 @@ from telegram.ext import ApplicationBuilder, Application, CommandHandler, Contex
 from telegram.error import NetworkError
 from config.settings import settings
 from config.database import init_db
+from backend import start_echogram_web_api, stop_echogram_web_api
 from utils.logger import logger
 # 引入模型以确保建表
 import models 
@@ -69,6 +70,12 @@ async def post_init(application: Application):
     else:
         logger.warning("JobQueue not available! RAG & NewsPush will not auto-run.")
 
+    await start_echogram_web_api()
+
+
+async def post_shutdown(application: Application):
+    await stop_echogram_web_api()
+
 def run_bot():
     """启动 Bot"""
     try:
@@ -84,6 +91,7 @@ def run_bot():
     logger.info("Building application...")
     application = ApplicationBuilder().token(settings.TG_BOT_TOKEN)\
         .post_init(post_init)\
+        .post_shutdown(post_shutdown)\
         .build()
 
     # 全局错误处理（避免 No error handlers are registered）

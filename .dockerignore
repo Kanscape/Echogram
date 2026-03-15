@@ -1,25 +1,33 @@
-# Git
 .git
 .gitignore
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
+.vscode
+.idea
+venv
+env
+ENV
 .env
-
-# Data & Logs
-data/
+__pycache__
+*.py[cod]
+*.log
 *.db
 *.sqlite3
-*.log
 
-# Docs & Tests
-docs/
-tests/
-*.md
-LICENSE
+docs
+plans
+ref
+suite
+dashboard
+
+node_modules
+.dart_tool
+.jaspr
+coverage
+build
+dist
+
+apps/echogram_web/node_modules
+apps/echogram_web/.dart_tool
+apps/echogram_web/build
+packages/**/.dart_tool
+
+Echogram-PRD.md

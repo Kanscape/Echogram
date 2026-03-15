@@ -33,6 +33,13 @@ class Settings:
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     OPENAI_MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
     SUMMARY_MODEL = os.getenv("SUMMARY_MODEL", "gpt-4o-mini")
+
+    # Echogram Web
+    WEB_DASHBOARD_HOST = os.getenv("WEB_DASHBOARD_HOST", "127.0.0.1")
+    WEB_DASHBOARD_PORT = int(os.getenv("WEB_DASHBOARD_PORT", 8765))
+    WEB_DASHBOARD_UI_URL = os.getenv("WEB_DASHBOARD_UI_URL", "")
+    WEB_DASHBOARD_TOKEN = os.getenv("WEB_DASHBOARD_TOKEN", "")
+    WEB_DASHBOARD_AUTO_OPEN = os.getenv("WEB_DASHBOARD_AUTO_OPEN", "false").strip().lower() in ("1", "true", "yes", "on")
     
     @classmethod
     def validate(cls):
