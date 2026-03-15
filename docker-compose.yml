@@ -1,9 +1,6 @@
 services:
   echogram-backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: echogram-backend:latest
+    image: ${ECHOGRAM_BACKEND_IMAGE:-ghcr.io/Kanscape/echogram-backend}:${ECHOGRAM_IMAGE_TAG:-latest}
     container_name: echogram-backend
     restart: unless-stopped
     env_file:
@@ -36,10 +33,7 @@ services:
         max-file: "3"
 
   echogram-web:
-    build:
-      context: .
-      dockerfile: apps/echogram_web/Dockerfile
-    image: echogram-web:latest
+    image: ${ECHOGRAM_WEB_IMAGE:-ghcr.io/Kanscape/echogram-web}:${ECHOGRAM_IMAGE_TAG:-latest}
     container_name: echogram-web
     restart: unless-stopped
     depends_on:

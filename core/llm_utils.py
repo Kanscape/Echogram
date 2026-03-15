@@ -57,7 +57,7 @@ async def fetch_embedding_models():
     try:
         headers = {
             "Authorization": f"Bearer {api_key}",
-            "HTTP-Referer": "https://github.com/LiuHaoUltra/Echogram", 
+            "HTTP-Referer": "https://github.com/Kanscape/Echogram", 
             "X-Title": "Echogram"
         }
         

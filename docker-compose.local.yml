@@ -1,0 +1,12 @@
+services:
+  echogram-backend:
+    image: echogram-backend:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+  echogram-web:
+    image: echogram-web:local
+    build:
+      context: .
+      dockerfile: apps/echogram_web/Dockerfile
