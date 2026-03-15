@@ -11,25 +11,28 @@ class DashboardApiException implements Exception {
   final int? statusCode;
 
   @override
-  String toString() => 'DashboardApiException(statusCode: $statusCode, message: $message)';
+  String toString() =>
+      'DashboardApiException(statusCode: $statusCode, message: $message)';
 }
 
 class DashboardApiClient {
-  DashboardApiClient({
-    required this.connection,
-    http.Client? httpClient,
-  }) : _httpClient = httpClient ?? http.Client();
+  DashboardApiClient({required this.connection, http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
 
   final DashboardConnection connection;
   final http.Client _httpClient;
 
   Uri _uri(String path, [Map<String, String>? queryParameters]) {
     final base = Uri.parse(connection.apiBaseUrl);
-    final baseSegments = base.pathSegments.where((segment) => segment.isNotEmpty);
+    final baseSegments = base.pathSegments.where(
+      (segment) => segment.isNotEmpty,
+    );
     final pathSegments = path.split('/').where((segment) => segment.isNotEmpty);
     return base.replace(
       pathSegments: [...baseSegments, ...pathSegments],
-      queryParameters: queryParameters == null || queryParameters.isEmpty ? null : queryParameters,
+      queryParameters: queryParameters == null || queryParameters.isEmpty
+          ? null
+          : queryParameters,
     );
   }
 
@@ -55,13 +58,36 @@ class DashboardApiClient {
     return ChatDetail.fromJson(await _getMap('chats/$chatId'));
   }
 
-  Future<PromptPreview> getPromptPreview(int chatId) async {
-    return PromptPreview.fromJson(await _getMap('chats/$chatId/prompt-preview'));
+  Future<RecentMessagePage> getRecentMessages(
+    int chatId, {
+    int limit = 12,
+    int offset = 0,
+  }) async {
+    return RecentMessagePage.fromJson(
+      await _getMap(
+        'chats/$chatId/messages',
+        queryParameters: {'limit': '$limit', 'offset': '$offset'},
+      ),
+    );
   }
 
-  Future<List<RagRecord>> getRagRecords(int chatId, {int limit = 40}) async {
-    final json = await _getList('chats/$chatId/rag-records', queryParameters: {'limit': '$limit'});
-    return json.map((item) => RagRecord.fromJson(readMap(item))).toList();
+  Future<PromptPreview> getPromptPreview(int chatId) async {
+    return PromptPreview.fromJson(
+      await _getMap('chats/$chatId/prompt-preview'),
+    );
+  }
+
+  Future<RagRecordPage> getRagRecords(
+    int chatId, {
+    int limit = 12,
+    int offset = 0,
+  }) async {
+    return RagRecordPage.fromJson(
+      await _getMap(
+        'chats/$chatId/rag-records',
+        queryParameters: {'limit': '$limit', 'offset': '$offset'},
+      ),
+    );
   }
 
   Future<void> rebuildRag(int chatId) async {
@@ -69,12 +95,16 @@ class DashboardApiClient {
   }
 
   Future<LogSnapshot> getLogs({int charLimit = 8000}) async {
-    return LogSnapshot.fromJson(await _getMap('logs/recent', queryParameters: {'limit': '$charLimit'}));
+    return LogSnapshot.fromJson(
+      await _getMap('logs/recent', queryParameters: {'limit': '$charLimit'}),
+    );
   }
 
   Future<List<SubscriptionRecord>> getSubscriptions() async {
     final json = await _getList('subscriptions');
-    return json.map((item) => SubscriptionRecord.fromJson(readMap(item))).toList();
+    return json
+        .map((item) => SubscriptionRecord.fromJson(readMap(item)))
+        .toList();
   }
 
   Future<Map<String, dynamic>> _getMap(

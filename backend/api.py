@@ -68,6 +68,16 @@ def _parse_chat_id(request: web.Request) -> int:
         raise web.HTTPBadRequest(reason="invalid chat id") from exc
 
 
+def _parse_query_int(request: web.Request, key: str, default: int) -> int:
+    value = request.query.get(key)
+    if value is None or value == "":
+        return default
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise web.HTTPBadRequest(reason=f"invalid {key}") from exc
+
+
 async def health(_request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "name": "Echogram Web"})
 
@@ -98,10 +108,24 @@ async def chats(request: web.Request) -> web.Response:
 
 
 async def chat_detail(request: web.Request) -> web.Response:
-    detail = await echogram_web_service.get_chat_detail(_parse_chat_id(request))
+    detail = await echogram_web_service.get_chat_detail(
+        _parse_chat_id(request),
+        recent_limit=_parse_query_int(request, "recent_limit", 12),
+    )
     if not detail:
         raise web.HTTPNotFound(reason="chat not found")
     return web.json_response(detail)
+
+
+async def recent_messages(request: web.Request) -> web.Response:
+    page = await echogram_web_service.get_recent_messages(
+        _parse_chat_id(request),
+        limit=_parse_query_int(request, "limit", 12),
+        offset=_parse_query_int(request, "offset", 0),
+    )
+    if not page:
+        raise web.HTTPNotFound(reason="chat not found")
+    return web.json_response(page)
 
 
 async def prompt_preview(request: web.Request) -> web.Response:
@@ -112,8 +136,14 @@ async def prompt_preview(request: web.Request) -> web.Response:
 
 
 async def rag_records(request: web.Request) -> web.Response:
-    limit = int(request.query.get("limit", "40"))
-    return web.json_response(await echogram_web_service.get_rag_records(_parse_chat_id(request), limit=limit))
+    page = await echogram_web_service.get_rag_records(
+        _parse_chat_id(request),
+        limit=_parse_query_int(request, "limit", 12),
+        offset=_parse_query_int(request, "offset", 0),
+    )
+    if not page:
+        raise web.HTTPNotFound(reason="chat not found")
+    return web.json_response(page)
 
 
 async def rebuild_rag(request: web.Request) -> web.Response:
@@ -138,6 +168,7 @@ def create_app() -> web.Application:
     app.router.add_patch("/api/settings", patch_settings)
     app.router.add_get("/api/chats", chats)
     app.router.add_get("/api/chats/{chat_id}", chat_detail)
+    app.router.add_get("/api/chats/{chat_id}/messages", recent_messages)
     app.router.add_get("/api/chats/{chat_id}/prompt-preview", prompt_preview)
     app.router.add_get("/api/chats/{chat_id}/rag-records", rag_records)
     app.router.add_post("/api/chats/{chat_id}/rag/rebuild", rebuild_rag)

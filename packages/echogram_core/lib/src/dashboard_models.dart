@@ -1,8 +1,5 @@
 class DashboardConnection {
-  const DashboardConnection({
-    required this.apiBaseUrl,
-    this.token,
-  });
+  const DashboardConnection({required this.apiBaseUrl, this.token});
 
   final String apiBaseUrl;
   final String? token;
@@ -11,7 +8,9 @@ class DashboardConnection {
     Uri uri, {
     String defaultApiBaseUrl = 'http://127.0.0.1:8765/api',
   }) {
-    final api = uri.queryParameters['api'] ?? _resolveDefaultApiBaseUrl(uri, fallback: defaultApiBaseUrl);
+    final api =
+        uri.queryParameters['api'] ??
+        _resolveDefaultApiBaseUrl(uri, fallback: defaultApiBaseUrl);
     final token = uri.queryParameters['token'];
     return DashboardConnection(
       apiBaseUrl: _normalizeUrl(api),
@@ -59,7 +58,9 @@ class DashboardMeta {
       botName: readString(json['bot_name']),
       apiBase: readString(json['api_base']),
       uiUrl: readNullableString(json['ui_url']),
-      telegramRetainedCommands: readStringList(json['telegram_retained_commands']),
+      telegramRetainedCommands: readStringList(
+        json['telegram_retained_commands'],
+      ),
       webFocusAreas: readStringList(json['web_focus_areas']),
     );
   }
@@ -102,7 +103,10 @@ class DashboardSettingsSnapshot {
       mediaModel: readNullableString(json['media_model']),
       timezone: readString(json['timezone'], fallback: 'UTC'),
       historyTokens: readInt(json['history_tokens']),
-      aggregationLatency: readString(json['aggregation_latency'], fallback: '10.0'),
+      aggregationLatency: readString(
+        json['aggregation_latency'],
+        fallback: '10.0',
+      ),
       activeStart: readString(activeHours['start'], fallback: '08:00'),
       activeEnd: readString(activeHours['end'], fallback: '23:00'),
       idleThresholdMinutes: readInt(json['idle_threshold_minutes']),
@@ -179,8 +183,12 @@ class DashboardOverview {
     return DashboardOverview(
       meta: DashboardMeta.fromJson(readMap(json['meta'])),
       settings: DashboardSettingsSnapshot.fromJson(readMap(json['settings'])),
-      subscriptions: DashboardSubscriptionSnapshot.fromJson(readMap(json['subscriptions'])),
-      recentChats: readList(json['recent_chats']).map((item) => ChatSummary.fromJson(readMap(item))).toList(),
+      subscriptions: DashboardSubscriptionSnapshot.fromJson(
+        readMap(json['subscriptions']),
+      ),
+      recentChats: readList(
+        json['recent_chats'],
+      ).map((item) => ChatSummary.fromJson(readMap(item))).toList(),
     );
   }
 }
@@ -258,7 +266,7 @@ class RecentMessage {
     required this.role,
     required this.messageType,
     required this.timestamp,
-    required this.contentPreview,
+    required this.content,
   });
 
   final int dbId;
@@ -266,7 +274,7 @@ class RecentMessage {
   final String role;
   final String messageType;
   final String? timestamp;
-  final String contentPreview;
+  final String content;
 
   factory RecentMessage.fromJson(Map<String, dynamic> json) {
     return RecentMessage(
@@ -275,7 +283,47 @@ class RecentMessage {
       role: readString(json['role']),
       messageType: readString(json['message_type'], fallback: 'text'),
       timestamp: readNullableString(json['timestamp']),
-      contentPreview: readString(json['content_preview'], fallback: ''),
+      content: readString(
+        json['content'] ?? json['content_preview'],
+        fallback: '',
+      ),
+    );
+  }
+}
+
+class RecentMessagePage {
+  const RecentMessagePage({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+    required this.hasPrev,
+    required this.hasNext,
+    required this.prevOffset,
+    required this.nextOffset,
+  });
+
+  final List<RecentMessage> items;
+  final int total;
+  final int limit;
+  final int offset;
+  final bool hasPrev;
+  final bool hasNext;
+  final int? prevOffset;
+  final int? nextOffset;
+
+  factory RecentMessagePage.fromJson(Map<String, dynamic> json) {
+    return RecentMessagePage(
+      items: readList(
+        json['items'],
+      ).map((item) => RecentMessage.fromJson(readMap(item))).toList(),
+      total: readInt(json['total']),
+      limit: readInt(json['limit']),
+      offset: readInt(json['offset']),
+      hasPrev: readBool(json['has_prev']),
+      hasNext: readBool(json['has_next']),
+      prevOffset: readNullableInt(json['prev_offset']),
+      nextOffset: readNullableInt(json['next_offset']),
     );
   }
 }
@@ -317,7 +365,9 @@ class ChatDetail {
       sessionStats: SessionStats.fromJson(readMap(json['session_stats'])),
       summary: SummarySnapshot.fromJson(readMap(json['summary'])),
       ragStats: RagStats.fromJson(readMap(json['rag_stats'])),
-      recentMessages: readList(json['recent_messages']).map((item) => RecentMessage.fromJson(readMap(item))).toList(),
+      recentMessages: readList(
+        json['recent_messages'],
+      ).map((item) => RecentMessage.fromJson(readMap(item))).toList(),
     );
   }
 }
@@ -362,7 +412,7 @@ class RagRecord {
     required this.denoisedContent,
     required this.role,
     required this.messageType,
-    required this.sourcePreview,
+    required this.sourceContent,
   });
 
   final int msgId;
@@ -371,7 +421,7 @@ class RagRecord {
   final String denoisedContent;
   final String role;
   final String messageType;
-  final String sourcePreview;
+  final String sourceContent;
 
   factory RagRecord.fromJson(Map<String, dynamic> json) {
     return RagRecord(
@@ -381,7 +431,47 @@ class RagRecord {
       denoisedContent: readString(json['denoised_content'], fallback: ''),
       role: readString(json['role'], fallback: 'unknown'),
       messageType: readString(json['message_type'], fallback: 'text'),
-      sourcePreview: readString(json['source_preview'], fallback: ''),
+      sourceContent: readString(
+        json['source_content'] ?? json['source_preview'],
+        fallback: '',
+      ),
+    );
+  }
+}
+
+class RagRecordPage {
+  const RagRecordPage({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+    required this.hasPrev,
+    required this.hasNext,
+    required this.prevOffset,
+    required this.nextOffset,
+  });
+
+  final List<RagRecord> items;
+  final int total;
+  final int limit;
+  final int offset;
+  final bool hasPrev;
+  final bool hasNext;
+  final int? prevOffset;
+  final int? nextOffset;
+
+  factory RagRecordPage.fromJson(Map<String, dynamic> json) {
+    return RagRecordPage(
+      items: readList(
+        json['items'],
+      ).map((item) => RagRecord.fromJson(readMap(item))).toList(),
+      total: readInt(json['total']),
+      limit: readInt(json['limit']),
+      offset: readInt(json['offset']),
+      hasPrev: readBool(json['has_prev']),
+      hasNext: readBool(json['has_next']),
+      prevOffset: readNullableInt(json['prev_offset']),
+      nextOffset: readNullableInt(json['next_offset']),
     );
   }
 }

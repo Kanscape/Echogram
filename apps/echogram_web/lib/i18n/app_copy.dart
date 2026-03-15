@@ -198,7 +198,7 @@ class AppCopy {
   String get summaryEmpty => isZh ? '当前还没有归档摘要。' : 'No archived summary yet.';
   String lastSummarizedId(int id) => isZh ? '最后摘要 ID $id' : 'Last summarized id $id';
   String get recentMessagesEyebrow => isZh ? '最近消息' : 'Recent messages';
-  String get recentMessagesTitle => isZh ? '活跃窗口预览' : 'Preview of the active window';
+  String get recentMessagesTitle => isZh ? '活跃窗口消息' : 'Active window messages';
   String get promptEyebrow => isZh ? 'Prompt 预览' : 'Prompt preview';
   String get promptFallbackTitle => isZh ? 'Prompt 组合' : 'Prompt composition';
   String get systemProtocol => isZh ? '系统协议' : 'System protocol';
@@ -209,8 +209,14 @@ class AppCopy {
   String get ragTitle => isZh ? '已降噪并已索引的记录' : 'What has been denoised and indexed';
   String get ragEmpty => isZh ? '这个会话还没有 RAG 记录。' : 'No RAG records yet for this chat.';
   String get denoisedFact => isZh ? '降噪结果' : 'Denoised fact';
-  String get sourcePreview => isZh ? '来源预览' : 'Source preview';
+  String get sourcePreview => isZh ? '源消息原文' : 'Source content';
   String get emptyLabel => isZh ? '空' : '(empty)';
+  String get messagesEmpty => isZh ? '这个会话当前没有可展示的消息记录。' : 'No messages are available for this chat yet.';
+  String get messagesLoading => isZh ? '正在读取消息分页数据...' : 'Loading message records...';
+  String get ragLoading => isZh ? '正在读取 RAG 分页数据...' : 'Loading RAG records...';
+  String get rawDataNotice => isZh
+      ? '这里展示数据库原始内容，不再做预览截断；记录过多时改用分页。'
+      : 'These panels show raw database content without preview clipping. Large result sets are paginated instead.';
   String get logsEyebrow => isZh ? '日志' : 'Logs';
   String get logsTitle => isZh ? '运行日志应该属于 Dashboard 的一部分。' : 'Runtime visibility belongs inside the dashboard.';
   String get refreshLogs => isZh ? '刷新日志' : 'Refresh logs';
@@ -225,7 +231,12 @@ class AppCopy {
   String get authLabel => isZh ? '认证' : 'Auth';
   String get pathLabel => isZh ? '路径' : 'Path';
   String get modeLabel => isZh ? '模式' : 'Mode';
+  String get databaseModeLabel => isZh ? '数据库原文' : 'Database raw';
   String get clientModeLabel => isZh ? '客户端' : 'Client';
+  String get pageLabel => isZh ? '分页' : 'Page';
+  String pageRange(int start, int end, int total) => '$start-$end / $total';
+  String get prevPage => isZh ? '上一页' : 'Prev';
+  String get nextPage => isZh ? '下一页' : 'Next';
   String get stateLabel => isZh ? '状态' : 'State';
   String get typeGroup => isZh ? '群组' : 'group';
   String get typePrivate => isZh ? '私聊' : 'private';

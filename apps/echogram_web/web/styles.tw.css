@@ -21,6 +21,7 @@ html {
 
 body {
   min-height: 100vh;
+  overflow-x: clip;
   background:
     radial-gradient(circle at top left, rgba(13, 148, 136, 0.16), transparent 32%),
     radial-gradient(circle at top right, rgba(249, 115, 22, 0.16), transparent 34%),
@@ -37,6 +38,7 @@ pre,
 }
 
 .shell-glass {
+  min-width: 0;
   backdrop-filter: blur(14px);
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(15, 23, 42, 0.08);
@@ -53,6 +55,10 @@ pre,
 .echo-grid {
   display: grid;
   gap: 1rem;
+}
+
+.echo-grid > * {
+  min-width: 0;
 }
 
 .echo-backdrop {

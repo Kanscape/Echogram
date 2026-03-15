@@ -33,6 +33,19 @@ def _safe_int(value: Any, default: int) -> int:
         return default
 
 
+def _bounded(limit: int, default: int, maximum: int) -> int:
+    return max(1, min(limit or default, maximum))
+
+
+def _safe_offset(offset: int) -> int:
+    return max(0, offset or 0)
+
+
+def _clip(text: str, limit: int = 220) -> str:
+    text = text or ""
+    return text if len(text) <= limit else f"{text[: limit - 3]}..."
+
+
 def _visible_content(raw_content: str) -> str:
     text = raw_content or ""
     match = re.search(r"<chat[^>]*>(?P<body>.*?)</chat>", text, flags=re.DOTALL | re.IGNORECASE)
@@ -41,9 +54,19 @@ def _visible_content(raw_content: str) -> str:
     return re.sub(r"<[^>]+>", "", text, flags=re.DOTALL).strip()
 
 
-def _clip(text: str, limit: int = 220) -> str:
-    text = text or ""
-    return text if len(text) <= limit else f"{text[: limit - 3]}..."
+def _page(items: list[dict[str, Any]], total: int, limit: int, offset: int) -> dict[str, Any]:
+    next_offset = offset + limit
+    prev_offset = max(0, offset - limit)
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_prev": offset > 0,
+        "has_next": next_offset < total,
+        "prev_offset": prev_offset if offset > 0 else None,
+        "next_offset": next_offset if next_offset < total else None,
+    }
 
 
 async def _load_whitelist_map() -> dict[int, Whitelist]:
@@ -174,7 +197,7 @@ class EchogramWebService:
             whitelist_hit = await session.execute(select(Whitelist.chat_id).where(Whitelist.chat_id == chat_id))
             return whitelist_hit.scalar_one_or_none() is not None
 
-    async def get_chat_detail(self, chat_id: int, recent_limit: int = 24) -> dict[str, Any] | None:
+    async def get_chat_detail(self, chat_id: int, recent_limit: int = 12) -> dict[str, Any] | None:
         if not await self.chat_exists(chat_id):
             return None
 
@@ -219,11 +242,50 @@ class EchogramWebService:
                     "role": message.role,
                     "message_type": message.message_type,
                     "timestamp": _iso(message.timestamp),
-                    "content_preview": _clip(_visible_content(message.content), 320),
+                    "content": message.content or "",
                 }
                 for message in recent_messages
             ],
         }
+
+    async def get_recent_messages(
+        self,
+        chat_id: int,
+        *,
+        limit: int = 12,
+        offset: int = 0,
+    ) -> dict[str, Any] | None:
+        if not await self.chat_exists(chat_id):
+            return None
+
+        limit = _bounded(limit, default=12, maximum=100)
+        offset = _safe_offset(offset)
+
+        async for session in get_db_session():
+            total_stmt = select(func.count(History.id)).where(History.chat_id == chat_id)
+            total = int((await session.execute(total_stmt)).scalar_one() or 0)
+
+            stmt = (
+                select(History)
+                .where(History.chat_id == chat_id)
+                .order_by(History.id.desc())
+                .offset(offset)
+                .limit(limit)
+            )
+            messages = list(reversed((await session.execute(stmt)).scalars().all()))
+
+        items = [
+            {
+                "db_id": message.id,
+                "message_id": message.message_id,
+                "role": message.role,
+                "message_type": message.message_type,
+                "timestamp": _iso(message.timestamp),
+                "content": message.content or "",
+            }
+            for message in messages
+        ]
+        return _page(items, total=total, limit=limit, offset=offset)
 
     async def build_prompt_preview(self, chat_id: int) -> dict[str, Any] | None:
         chat_detail = await self.get_chat_detail(chat_id, recent_limit=12)
@@ -288,18 +350,34 @@ class EchogramWebService:
             "memory_context": "\n".join(lines).strip(),
         }
 
-    async def get_rag_records(self, chat_id: int, limit: int = 40) -> list[dict[str, Any]]:
+    async def get_rag_records(
+        self,
+        chat_id: int,
+        *,
+        limit: int = 12,
+        offset: int = 0,
+    ) -> dict[str, Any] | None:
+        if not await self.chat_exists(chat_id):
+            return None
+
+        limit = _bounded(limit, default=12, maximum=100)
+        offset = _safe_offset(offset)
+
         async for session in get_db_session():
+            total_stmt = select(func.count(RagStatus.msg_id)).where(RagStatus.chat_id == chat_id)
+            total = int((await session.execute(total_stmt)).scalar_one() or 0)
+
             stmt = (
                 select(RagStatus, History)
                 .join(History, History.id == RagStatus.msg_id)
                 .where(RagStatus.chat_id == chat_id)
                 .order_by(RagStatus.processed_at.desc())
+                .offset(offset)
                 .limit(limit)
             )
             rows = (await session.execute(stmt)).all()
 
-        return [
+        items = [
             {
                 "msg_id": rag.msg_id,
                 "status": rag.status,
@@ -307,10 +385,11 @@ class EchogramWebService:
                 "denoised_content": rag.denoised_content or "",
                 "role": history.role,
                 "message_type": history.message_type,
-                "source_preview": _clip(_visible_content(history.content), 220),
+                "source_content": history.content or "",
             }
             for rag, history in rows
         ]
+        return _page(items, total=total, limit=limit, offset=offset)
 
     async def rebuild_rag(self, chat_id: int) -> dict[str, Any]:
         await rag_service.rebuild_index(chat_id)
