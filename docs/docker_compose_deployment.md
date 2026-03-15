@@ -28,6 +28,18 @@
 
 - `ECHOGRAM_WEB_PORT` defaults to `8080` and publishes the browser UI.
 - `ECHOGRAM_API_PORT` defaults to `8765` and is bound to `127.0.0.1` only for local debugging.
+- `ECHOGRAM_WEB_BIND` defaults to `127.0.0.1`.
+- `ECHOGRAM_API_BIND` defaults to `127.0.0.1`.
+
+## Cloudflare Tunnel
+
+If you use Cloudflare Tunnel plus Cloudflare Access, this compose setup is a good fit:
+
+- Keep both bind addresses on `127.0.0.1`.
+- Point the tunnel origin at `http://localhost:8080`.
+- Leave the backend API unpublished to the internet and let Nginx proxy `/api` internally.
+
+With that setup, the dashboard is not directly exposed on a public interface, so ordinary internet port scans cannot hit it on your machine.
 
 ## Notes
 

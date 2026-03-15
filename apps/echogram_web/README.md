@@ -32,6 +32,8 @@ With the root-level `docker-compose.yml`, Echogram Web is served by Nginx and pr
 2. Fill in `TG_BOT_TOKEN` and `ADMIN_USER_ID`.
 3. Run `docker compose up -d --build`.
 
+By default both published ports bind to `127.0.0.1`, so the dashboard and API are only reachable from the local machine unless you intentionally change `ECHOGRAM_WEB_BIND` or `ECHOGRAM_API_BIND`.
+
 After startup:
 
 - Home: `http://localhost:8080/`

@@ -15,7 +15,7 @@ services:
       WEB_DASHBOARD_UI_URL: ${WEB_DASHBOARD_UI_URL:-http://localhost:8080/dashboard}
       WEB_DASHBOARD_AUTO_OPEN: "false"
     ports:
-      - "127.0.0.1:${ECHOGRAM_API_PORT:-8765}:8765"
+      - "${ECHOGRAM_API_BIND:-127.0.0.1}:${ECHOGRAM_API_PORT:-8765}:8765"
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
@@ -46,7 +46,7 @@ services:
       echogram-backend:
         condition: service_healthy
     ports:
-      - "${ECHOGRAM_WEB_PORT:-8080}:80"
+      - "${ECHOGRAM_WEB_BIND:-127.0.0.1}:${ECHOGRAM_WEB_PORT:-8080}:80"
     logging:
       driver: json-file
       options:
