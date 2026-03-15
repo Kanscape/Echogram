@@ -41,7 +41,13 @@ data/
 .idea/
 
 # Client
-Antenna/
+suite/
+
+# Reference
+ref/
+
+# Plans
+plans/
 
 # PRD
 Echogram-PRD.md
