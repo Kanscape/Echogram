@@ -12,6 +12,10 @@ class AppShell extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     final location = RouteState.of(context).location;
+    if (location.startsWith('/dashboard')) {
+      return div(classes: 'dashboard-route-shell', [child]);
+    }
+
     final t = AppCopy.current;
 
     return div(classes: 'relative min-h-screen overflow-x-clip text-slate-900 dark:text-slate-100', [

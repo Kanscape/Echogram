@@ -49,6 +49,14 @@ class DashboardApiClient {
     return json.map((key, value) => MapEntry(key, value?.toString() ?? ''));
   }
 
+  Future<Map<String, String>> patchSettings(Map<String, String> changes) async {
+    final json = readMap(
+      await _request('PATCH', 'settings', jsonBody: changes),
+    );
+    final updated = readMap(json['updated']);
+    return updated.map((key, value) => MapEntry(key, value?.toString() ?? ''));
+  }
+
   Future<List<ChatSummary>> getChats({int limit = 20}) async {
     final json = await _getList('chats', queryParameters: {'limit': '$limit'});
     return json.map((item) => ChatSummary.fromJson(readMap(item))).toList();
@@ -127,19 +135,44 @@ class DashboardApiClient {
     String method,
     String path, {
     Map<String, String>? queryParameters,
+    Map<String, String>? jsonBody,
   }) async {
     final uri = _uri(path, queryParameters);
     late http.Response response;
+    final headers = {
+      ...connection.headers(),
+      if (jsonBody != null) 'Content-Type': 'application/json',
+    };
 
     if (method == 'GET') {
-      response = await _httpClient.get(uri, headers: connection.headers());
+      response = await _httpClient.get(uri, headers: headers);
     } else if (method == 'POST') {
-      response = await _httpClient.post(uri, headers: connection.headers());
+      response = await _httpClient.post(uri, headers: headers);
+    } else if (method == 'PATCH') {
+      response = await _httpClient.patch(
+        uri,
+        headers: headers,
+        body: jsonEncode(jsonBody ?? const <String, String>{}),
+      );
     } else {
       throw DashboardApiException('Unsupported method: $method');
     }
 
-    final body = response.body.isEmpty ? null : jsonDecode(response.body);
+    dynamic body;
+    if (response.body.isNotEmpty) {
+      try {
+        body = jsonDecode(response.body);
+      } on FormatException {
+        final preview = response.body.trimLeft();
+        throw DashboardApiException(
+          preview.startsWith('<')
+              ? 'Dashboard endpoint returned HTML instead of JSON.'
+              : 'Dashboard endpoint returned invalid JSON.',
+          statusCode: response.statusCode,
+        );
+      }
+    }
+
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final errorBody = body is Map<String, dynamic> ? body : const {};
       throw DashboardApiException(
