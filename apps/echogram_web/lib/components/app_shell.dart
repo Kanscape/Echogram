@@ -4,123 +4,68 @@ import 'package:jaspr_router/jaspr_router.dart';
 
 import '../i18n/app_copy.dart';
 
-class AppShell extends StatefulComponent {
+class AppShell extends StatelessComponent {
   const AppShell({required this.child, super.key});
 
   final Component child;
-
-  @override
-  State<AppShell> createState() => AppShellState();
-}
-
-class AppShellState extends State<AppShell> {
-  bool _isCollapsed = false;
-
-  void _toggleSidebar() {
-    setState(() {
-      _isCollapsed = !_isCollapsed;
-    });
-  }
 
   @override
   Component build(BuildContext context) {
     final location = RouteState.of(context).location;
     final t = AppCopy.current;
 
-    // Background color: Geek Black (#0a0a0a) / Off-white (#faf9f6)
-    return div(
-      classes:
-          'relative flex min-h-screen bg-[#faf9f6] text-slate-800 transition-colors duration-200 dark:bg-[#0a0a0a] dark:text-slate-200 font-sans',
-      [
-        _buildSidebar(location, t),
-        // Main Content
-        div(classes: 'flex-1 min-w-0 flex flex-col h-screen overflow-hidden relative', [
-          div(classes: 'flex-1 min-w-0 p-4 lg:p-8 overflow-y-auto', [
-            div(classes: 'w-full max-w-[1400px] mx-auto', [
-              component.child,
+    return div(classes: 'relative min-h-screen overflow-x-clip text-slate-900 dark:text-slate-100', [
+      div(classes: 'echo-backdrop pointer-events-none fixed inset-0 opacity-70', []),
+      div(classes: 'relative mx-auto flex min-h-screen w-full max-w-[1500px] min-w-0 flex-col gap-6 px-4 py-6 lg:px-8', [
+        div(classes: 'shell-glass overflow-hidden rounded-[2rem] px-6 py-5', [
+          div(classes: 'flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between', [
+            div(classes: 'flex min-w-0 items-center gap-4', [
+              div(
+                classes:
+                    'inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-900 text-sm font-bold uppercase tracking-[0.24em] text-white shadow-lg dark:bg-white dark:text-slate-950',
+                [
+                  .text('EG'),
+                ],
+              ),
+              div(classes: 'min-w-0 space-y-1', [
+                div(classes: 'text-xs font-bold uppercase tracking-[0.24em] text-teal-700 dark:text-teal-300', [
+                  .text(t.brandLabel),
+                ]),
+                p(classes: 'break-words text-sm text-slate-600 dark:text-slate-300', [
+                  .text(t.shellDescription),
+                ]),
+              ]),
+            ]),
+            div(classes: 'flex w-full flex-wrap items-start gap-2 lg:w-auto lg:justify-end', [
+              _navLink(location, '/', t.navHome),
+              _navLink(location, '/dashboard', t.navDashboard),
+              div(classes: 'shrink-0 rounded-full bg-teal-600 px-3 py-1 text-xs font-semibold text-white shadow-md', [
+                .text(t.autoLanguageBadge),
+              ]),
+              div(
+                classes:
+                    'w-full max-w-full rounded-2xl bg-white/80 px-3 py-2 text-xs font-medium leading-5 text-slate-600 shadow-md dark:bg-slate-900/85 dark:text-slate-300 dark:shadow-none sm:w-auto sm:rounded-full sm:py-1',
+                [
+                  .text(t.navTelegramHint),
+                ],
+              ),
             ]),
           ]),
         ]),
-      ],
-    );
+        child,
+      ]),
+    ]);
   }
 
-  Component _buildSidebar(String location, AppCopy t) {
-    return div(
-      classes:
-          'shrink-0 transition-all duration-300 border-r border-slate-200/60 bg-[#fcfbf9] dark:border-slate-800/60 dark:bg-[#121212] flex flex-col ${_isCollapsed ? 'w-[#5rem]' : 'w-64'}',
-      [
-        // Header
-        div(
-          classes:
-              'h-[72px] flex items-center ${_isCollapsed ? 'justify-center' : 'justify-between px-6'} border-b border-transparent bg-transparent',
-          [
-             div(classes: 'flex items-center gap-3', [
-               div(
-                 classes:
-                     'inline-flex h-[38px] w-[38px] items-center justify-center rounded-[12px] bg-slate-900 text-sm font-bold uppercase tracking-widest text-white shadow-sm dark:bg-white dark:text-slate-950',
-                 [.text('EG')],
-               ),
-               if (!_isCollapsed)
-                 span(
-                   classes:
-                       'font-bold text-[15px] tracking-[0.15em] uppercase text-slate-800 dark:text-slate-100',
-                   [.text(t.brandLabel)],
-                 ),
-             ]),
-          ],
-        ),
-        // Nav Links
-        div(classes: 'flex-1 overflow-y-auto py-5 flex flex-col gap-2 px-4', [
-          _navItem(location, '/', t.navHome, _iconHome()),
-          _navItem(location, '/dashboard', t.navDashboard, _iconDashboard()),
-        ]),
-        // Collapse Button
-        div(classes: 'p-4', [
-          button(
-            classes:
-                'w-full flex items-center ${_isCollapsed ? 'justify-center' : 'justify-start px-4'} h-11 rounded-[12px] hover:bg-slate-200/50 dark:hover:bg-slate-800/50 text-slate-500 transition-colors',
-            onClick: _toggleSidebar,
-            [
-              _isCollapsed ? _iconExpand() : _iconCollapse(),
-              if (!_isCollapsed)
-                span(classes: 'ml-3 text-[14px] font-medium', [.text('折叠面板')]),
-            ],
-          ),
-        ]),
-      ],
-    );
-  }
-
-  Component _navItem(String location, String path, String label, String svgPath) {
+  Component _navLink(String location, String path, String label) {
     final selected = path == '/' ? location == path : location.startsWith(path);
-    final linkClass = selected
-        ? 'flex items-center rounded-[12px] bg-indigo-600/10 text-indigo-700 font-semibold dark:bg-teal-400/10 dark:text-teal-300'
-        : 'flex items-center rounded-[12px] text-slate-500 hover:bg-slate-200/50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-white transition-colors';
+    final classes = selected
+        ? 'btn btn-sm border-0 bg-slate-900 text-white shadow-lg hover:bg-slate-800 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300'
+        : 'btn btn-sm border-0 bg-white/80 text-slate-700 shadow-md hover:bg-white dark:bg-slate-900/85 dark:text-slate-200 dark:shadow-none dark:hover:bg-slate-800';
 
     return Link(
       to: path,
-      child: div(
-          classes: '$linkClass ${_isCollapsed ? 'justify-center h-11 w-11 mx-auto' : 'px-4 h-11 w-full'}',
-          [
-            _rawSvg(svgPath),
-            if (!_isCollapsed)
-              span(classes: 'ml-3 text-[14px]', [.text(label)]),
-          ],
-      ),
+      child: span(classes: classes, [.text(label)]),
     );
-  }
-
-  Component _rawSvg(String pathData) {
-    return raw('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">$pathData</svg>');
-  }
-
-  String _iconHome() => '<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>';
-  String _iconDashboard() => '<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>';
-  Component _iconCollapse() {
-    return _rawSvg('<path d="m15 18-6-6 6-6"/>');
-  }
-  Component _iconExpand() {
-    return _rawSvg('<path d="m9 18 6-6-6-6"/>');
   }
 }
