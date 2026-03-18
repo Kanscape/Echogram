@@ -129,50 +129,50 @@ class AppCopy {
           'The local API seam lets Python evolve independently while the UI becomes portable.',
         ];
 
-  String get dashboardEyebrow => isZh ? 'Dashboard' : 'Dashboard';
-  String get dashboardConnectedTitle => isZh ? '已连接到本地 Echogram API。' : 'Connected to the local Echogram API.';
+  String get dashboardEyebrow => isZh ? '控制台' : 'Dashboard';
+  String get dashboardConnectedTitle => isZh ? '已连接本地 API 节点' : 'Connected to the local Echogram API.';
   String get dashboardOfflineTitle =>
-      isZh ? '即使后端未连接，Dashboard UI 也会先展示。' : 'Dashboard UI is ready before the backend connects.';
+      isZh ? '离线骨架模式' : 'Dashboard UI is ready before the backend connects.';
   String get dashboardConnectedBody => isZh
-      ? 'Python 负责持久化、RAG、日志与 Telegram 编排。Echogram Web 只通过本地 HTTP API 拉取和触发能力。'
+      ? '由 Python 服务端接管持久化、RAG、日志与调度；Web 控制台通过 HTTP API 进行可视控制。'
       : 'The Python bot owns persistence, RAG, logs, and Telegram orchestration. Echogram Web stays thin and typed, pulling everything through a local HTTP boundary.';
   String get dashboardOfflineBody => isZh
-      ? '你现在看到的是完整 Dashboard 结构。等本地 API 可用后，所有数据区会原地完成加载。'
+      ? 'API 链路未就绪。目前展示面板结构，连接就绪后自动填充业务数据。'
       : 'You can inspect the layout, navigation, and operations surface even while the backend is offline. When the local API becomes reachable, these panels hydrate in place.';
   String get stateConnected => isZh ? '已连接' : 'Connected';
   String get stateConnecting => isZh ? '连接中' : 'Connecting';
   String get stateOfflineUi => isZh ? '离线预览' : 'Offline UI';
   String get authAttached => isZh ? '已附带 Token' : 'Token attached';
-  String get recentChatsMetric => isZh ? '最近会话' : 'Recent chats';
-  String get recentChatsMetricHint => isZh ? '当前浏览器可见的活动会话' : 'Active conversations visible to the browser';
-  String get subscriptionsMetric => isZh ? '订阅源' : 'Subscriptions';
-  String subscriptionMetricHint(int errorCount) => isZh ? '$errorCount 个错误状态' : '$errorCount in error state';
-  String get historyWindowMetric => isZh ? '历史窗口' : 'History window';
+  String get recentChatsMetric => isZh ? '会话总数' : 'Recent chats';
+  String get recentChatsMetricHint => isZh ? '当前活动会话' : 'Active conversations visible to the browser';
+  String get subscriptionsMetric => isZh ? '分发订阅' : 'Subscriptions';
+  String subscriptionMetricHint(int errorCount) => isZh ? '$errorCount 个异常' : '$errorCount in error state';
+  String get historyWindowMetric => isZh ? '上下文窗口' : 'History window';
   String get historyWindowMetricHint =>
-      isZh ? '与 Telegram 及未来 Flutter 客户端共享' : 'Shared with Telegram and future Flutter clients';
-  String get chatsEyebrow => isZh ? '会话' : 'Chats';
-  String get chatsTitle => isZh ? '选择一个会话进行检查。' : 'Pick a conversation to inspect.';
+      isZh ? '全局多端共享上下文限制' : 'Shared with Telegram and future Flutter clients';
+  String get chatsEyebrow => isZh ? '会话列表' : 'Chats';
+  String get chatsTitle => isZh ? '检索与诊断会话' : 'Pick a conversation to inspect.';
   String get chatsEmpty => isZh
-      ? '当前还没有加载到任何会话。启动 Python bot，或把 ?api= 指向可访问的本地 API。'
+      ? '未检测到会话记录。请确认服务端引擎运行正常。'
       : 'No conversations are loaded yet. Start the Python bot or point ?api= to a reachable local API.';
-  String messagesCount(int count) => isZh ? '消息 $count' : 'Messages $count';
+  String messagesCount(int count) => isZh ? '消息 $count 条' : 'Messages $count';
   String get subscriptionsEyebrow => isZh ? '订阅' : 'Subscriptions';
   String get subscriptionsTitle => isZh ? '主动分发状态' : 'Agentic distribution status';
   String get subscriptionsEmpty =>
       isZh ? '连接成功后，订阅源健康度会显示在这里。' : 'Subscription health will appear here after the dashboard connects.';
   String targetsCount(int count) => isZh ? '目标 $count' : 'Targets $count';
   String errorsCount(int count) => isZh ? '错误 $count' : 'Errors $count';
-  String get loadingEyebrow => isZh ? '加载中' : 'Loading';
-  String get loadingFocusTitle => isZh ? '正在获取 Prompt、RAG 和摘要数据' : 'Fetching prompt preview, RAG records, and summary';
-  String get loadingFocusBody => isZh ? '当前选中会话正在加载。' : 'The selected conversation is being hydrated.';
-  String get focusEyebrow => isZh ? '主视图' : 'Focus';
-  String get focusOnlineTitle => isZh ? '选择一个会话来查看重操作信息。' : 'Select a chat to inspect heavy operations.';
-  String get focusOfflineTitle => isZh ? '离线时也保留完整 Dashboard 骨架。' : 'Dashboard skeleton stays visible while offline.';
+  String get loadingEyebrow => isZh ? '处理中' : 'Loading';
+  String get loadingFocusTitle => isZh ? '正在同步上下文' : 'Fetching prompt preview, RAG records, and summary';
+  String get loadingFocusBody => isZh ? '拉取诊断数据...' : 'The selected conversation is being hydrated.';
+  String get focusEyebrow => isZh ? '检查器' : 'Focus';
+  String get focusOnlineTitle => isZh ? '选中会话进行深度检查' : 'Select a chat to inspect heavy operations.';
+  String get focusOfflineTitle => isZh ? '离线骨架模式' : 'Dashboard skeleton stays visible while offline.';
   String get focusOnlineBody => isZh
-      ? '这里会显示会话统计、Prompt 组合、RAG 记录和最近消息预览。'
+      ? '呈现全量上下文信息：Prompt 组装过程、RAG 向量审计及底层消息原文。'
       : 'You will see session stats, prompt composition, RAG records, and recent message previews here.';
   String get focusOfflineBody => isZh
-      ? '等本地 API 可用后，这块区域会原地加载会话统计、Prompt 预览和 RAG 数据。'
+      ? '等待服务端链路恢复...'
       : 'Once the local API is reachable, this area will hydrate with chat stats, prompt previews, and RAG records.';
   String get selectedChatEyebrow => isZh ? '当前会话' : 'Selected chat';
   String get typeLabel => isZh ? '类型' : 'Type';
@@ -200,22 +200,22 @@ class AppCopy {
   String get recentMessagesEyebrow => isZh ? '最近消息' : 'Recent messages';
   String get recentMessagesTitle => isZh ? '活跃窗口消息' : 'Active window messages';
   String get promptEyebrow => isZh ? 'Prompt 预览' : 'Prompt preview';
-  String get promptFallbackTitle => isZh ? 'Prompt 组合' : 'Prompt composition';
-  String get systemProtocol => isZh ? '系统协议' : 'System protocol';
-  String get dynamicMemory => isZh ? '动态记忆与上下文' : 'Dynamic memory and context';
-  String get noPromptYet => isZh ? '当前还没有 Prompt 预览。' : 'No prompt preview yet.';
-  String get noMemoryYet => isZh ? '当前还没有记忆上下文。' : 'No memory context yet.';
+  String get promptFallbackTitle => isZh ? 'Prompt 最终态' : 'Prompt composition';
+  String get systemProtocol => isZh ? '系统协议组装' : 'System protocol';
+  String get dynamicMemory => isZh ? '动态记忆注入' : 'Dynamic memory and context';
+  String get noPromptYet => isZh ? '尚无 Prompt。' : 'No prompt preview yet.';
+  String get noMemoryYet => isZh ? '尚无记忆上下文。' : 'No memory context yet.';
   String get ragEyebrow => 'RAG';
-  String get ragTitle => isZh ? '已降噪并已索引的记录' : 'What has been denoised and indexed';
-  String get ragEmpty => isZh ? '这个会话还没有 RAG 记录。' : 'No RAG records yet for this chat.';
-  String get denoisedFact => isZh ? '降噪结果' : 'Denoised fact';
-  String get sourcePreview => isZh ? '源消息原文' : 'Source content';
-  String get emptyLabel => isZh ? '空' : '(empty)';
-  String get messagesEmpty => isZh ? '这个会话当前没有可展示的消息记录。' : 'No messages are available for this chat yet.';
-  String get messagesLoading => isZh ? '正在读取消息分页数据...' : 'Loading message records...';
-  String get ragLoading => isZh ? '正在读取 RAG 分页数据...' : 'Loading RAG records...';
+  String get ragTitle => isZh ? '降噪并索引的记录' : 'What has been denoised and indexed';
+  String get ragEmpty => isZh ? '未产生向量化记录。' : 'No RAG records yet for this chat.';
+  String get denoisedFact => isZh ? '提取向量要素' : 'Denoised fact';
+  String get sourcePreview => isZh ? '消息源文' : 'Source content';
+  String get emptyLabel => isZh ? '(空)' : '(empty)';
+  String get messagesEmpty => isZh ? '无底层消息记录。' : 'No messages are available for this chat yet.';
+  String get messagesLoading => isZh ? '检索分页数据...' : 'Loading message records...';
+  String get ragLoading => isZh ? '检索向量分页数据...' : 'Loading RAG records...';
   String get rawDataNotice => isZh
-      ? '这里展示数据库原始内容，不再做预览截断；记录过多时改用分页。'
+      ? 'DB 原文直出（无展示层截断处理），全量数据采用分页。'
       : 'These panels show raw database content without preview clipping. Large result sets are paginated instead.';
   String get logsEyebrow => isZh ? '日志' : 'Logs';
   String get logsTitle => isZh ? '运行日志应该属于 Dashboard 的一部分。' : 'Runtime visibility belongs inside the dashboard.';
