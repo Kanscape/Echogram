@@ -1063,6 +1063,12 @@ body {
 }
 
 .jaspr-panel {
+  --studio-page-padding: 18px;
+  --studio-panel-padding-x: 18px;
+  --studio-panel-padding-y: 16px;
+  --studio-panel-gap: 12px;
+  --studio-layout-gap: 14px;
+  --studio-content-gap: 12px;
   padding: 0;
   background: var(--studio-bg-bottom);
 }
@@ -1332,10 +1338,13 @@ body {
 }
 
 .dashboard-column,
-.dashboard-rail {
+.dashboard-rail,
+.dashboard-pane {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  padding: 18px;
-  gap: 14px;
+  padding: var(--studio-page-padding);
+  gap: var(--studio-layout-gap);
 }
 
 .dashboard-rail {
@@ -1384,12 +1393,19 @@ body {
 }
 
 .studio-panel {
-  padding: 16px 18px;
-  gap: 12px;
+  padding: var(--studio-panel-padding-y) var(--studio-panel-padding-x);
+  gap: var(--studio-panel-gap);
 }
 
 .studio-panel--compact {
   padding: 14px 16px;
+}
+
+.studio-surface__body {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--studio-content-gap);
 }
 
 .studio-eyebrow,

@@ -1223,10 +1223,12 @@ class DashboardPageState extends State<DashboardPage> {
 
   Component _buildLogsSection() {
     return div(classes: 'dashboard-log-grid', [
-      _buildChatNavigator(
-        title: _tr('日志对象', 'Log scope'),
-        copy: _tr('各面板将按选中实例过滤对应记录。', 'Log panels will filter records based on the selected instance.'),
-      ),
+      div(classes: 'dashboard-pane', [
+        _buildChatNavigator(
+          title: _tr('日志对象', 'Log scope'),
+          copy: _tr('各面板将按选中实例过滤对应记录。', 'Log panels will filter records based on the selected instance.'),
+        ),
+      ]),
       div(classes: 'dashboard-column', [
         _surface(
           eyebrow: _tr('全链路日志', 'System Logs'),
