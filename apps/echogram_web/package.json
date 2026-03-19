@@ -2,12 +2,16 @@
   "name": "echogram-web",
   "private": true,
   "scripts": {
+    "generate:icons": "node ./tool/generate-lucide-icons.mjs",
+    "prebuild:css": "npm run generate:icons",
     "build:css": "npx @tailwindcss/cli -i ./web/styles.tw.css -o ./web/styles.css --minify",
+    "prewatch:css": "npm run generate:icons",
     "watch:css": "npx @tailwindcss/cli -i ./web/styles.tw.css -o ./web/styles.css --watch"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.2.1",
     "daisyui": "^5.5.19",
+    "lucide-static": "^0.577.0",
     "tailwindcss": "^4.2.1"
   }
 }

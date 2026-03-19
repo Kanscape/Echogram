@@ -7,6 +7,7 @@ import 'package:echogram_core/echogram_core.dart';
 import 'package:jaspr/dom.dart';
 import 'package:jaspr/jaspr.dart';
 
+import '../components/lucide_icon.dart';
 import '../i18n/app_copy.dart';
 
 enum _DashboardSection {
@@ -314,14 +315,14 @@ class DashboardPageState extends State<DashboardPage> {
     }
 
     setState(() {
-      _notice = _tr('正在重建这个会话的 RAG 索引...', 'Rebuilding the RAG index for this chat...');
+      _notice = _tr('开始构建当前会话的 RAG 索引...', 'Initiating RAG index build for the current session...');
     });
 
     try {
       await _client.rebuildRag(chatId);
       await _selectChat(chatId, quiet: true);
       setState(() {
-        _notice = _tr('RAG 重建请求已发送。', 'RAG rebuild requested.');
+        _notice = _tr('RAG 构建任务已提交。', 'RAG build task submitted.');
       });
     } catch (error) {
       setState(() {
@@ -401,7 +402,7 @@ class DashboardPageState extends State<DashboardPage> {
     final changes = _groupChanges(group);
     if (changes.isEmpty) {
       setState(() {
-        _notice = _tr('这一组没有未保存改动。', 'No unsaved changes in this section.');
+        _notice = _tr('当前配置组暂无未保存项。', 'No unsaved changes in the current group.');
       });
       return;
     }
@@ -419,7 +420,7 @@ class DashboardPageState extends State<DashboardPage> {
         _settings = merged;
         _draftSettings = Map<String, String>.from(merged);
         _savingGroupId = null;
-        _notice = _tr('${group.title} 已保存。', '${group.title} saved.');
+        _notice = _tr('${group.title} 配置已保存。', '${group.title} configuration saved.');
       });
       await _loadDashboard();
     } catch (error) {
@@ -434,87 +435,87 @@ class DashboardPageState extends State<DashboardPage> {
     return [
       _SettingGroup(
         id: 'models',
-        title: _tr('API 与模型', 'API and models'),
+        title: _tr('API 与模型', 'API and Models'),
         description: _tr(
-          '负责接入上游推理能力与主要模型链路。',
-          'Connect the upstream inference stack and primary model pipeline.',
+          '配置上游推理端点与基础模型调用链路。',
+          'Configure upstream inference endpoints and core model pipelines.',
         ),
         fields: [
           _SettingField(
             key: 'api_base_url',
-            label: _tr('API Base URL', 'API base URL'),
-            help: _tr('模型服务的根地址。', 'Root URL for the model provider.'),
+            label: _tr('API Base URL', 'API Base URL'),
+            help: _tr('推理服务端点地址。', 'Inference endpoint address.'),
             placeholder: 'https://api.openai.com/v1',
           ),
           _SettingField(
             key: 'api_key',
-            label: _tr('API Key', 'API key'),
-            help: _tr('用于访问模型服务。', 'Credential used for model access.'),
+            label: _tr('API Key', 'API Key'),
+            help: _tr('服务鉴权密钥。', 'Authentication key.'),
             placeholder: 'sk-...',
             secret: true,
           ),
           _SettingField(
             key: 'model_name',
-            label: _tr('主模型', 'Main model'),
-            help: _tr('主对话链路使用的模型。', 'Primary model used for conversation generation.'),
+            label: _tr('主模型', 'Main Model'),
+            help: _tr('用于常规对话链路的模型。', 'Model used for regular conversations.'),
             placeholder: 'gpt-5.4',
           ),
           _SettingField(
             key: 'summary_model_name',
-            label: _tr('摘要模型', 'Summary model'),
-            help: _tr('留空时沿用主模型。', 'Leave empty to follow the main model.'),
+            label: _tr('摘要模型', 'Summary Model'),
+            help: _tr('留空则默认沿用主模型。', 'Leave empty to fall back to the main model.'),
             placeholder: 'Leave empty to follow main model',
           ),
           _SettingField(
             key: 'vector_model_name',
-            label: _tr('向量模型', 'Vector model'),
-            help: _tr('用于嵌入与 RAG 检索。', 'Used for embeddings and RAG retrieval.'),
+            label: _tr('向量模型', 'Vector Model'),
+            help: _tr('用于 Embeddings 生成与 RAG 检索模型。', 'Model for embeddings generation and RAG retrieval.'),
             placeholder: 'text-embedding-3-small',
           ),
           _SettingField(
             key: 'media_model',
-            label: _tr('媒体模型', 'Media model'),
-            help: _tr('用于图片、语音等媒体链路。', 'Used for image, voice, and other media paths.'),
+            label: _tr('多模态模型', 'Multimodal Model'),
+            help: _tr('负责视觉与语音等媒体文件处理链路。', 'Handles visual, audio, and multimedia processing pipelines.'),
             placeholder: 'gpt-4.1-mini',
           ),
         ],
       ),
       _SettingGroup(
         id: 'behavior',
-        title: _tr('行为与上下文', 'Behavior and context'),
+        title: _tr('行为与上下文', 'Behavior & Context'),
         description: _tr(
-          '控制 Prompt、历史窗口、时区与响应节奏。',
-          'Control prompt behavior, history window, timezone, and response pacing.',
+          '调节生成参数与记忆范围控制。',
+          'Adjust generation parameters and memory scope limits.',
         ),
         fields: [
           _SettingField(
             key: 'timezone',
-            label: _tr('时区', 'Timezone'),
-            help: _tr('例如 Asia/Hong_Kong。', 'Example: Asia/Hong_Kong.'),
+            label: _tr('系统时区', 'System Timezone'),
+            help: _tr('影响日志记录格式及基于时间的调度任务。', 'Affects log timestamp formatting and time-restricted tasks.'),
             placeholder: 'Asia/Hong_Kong',
           ),
           _SettingField(
             key: 'temperature',
             label: _tr('Temperature', 'Temperature'),
-            help: _tr('建议保持在 0.0 - 1.0 之间。', 'Usually kept between 0.0 and 1.0.'),
+            help: _tr('控制文本生成随机性，数值越大随机性越强（0.0 - 1.0）。', 'Controls generation randomness (0.0 to 1.0).'),
             placeholder: '0.7',
           ),
           _SettingField(
             key: 'history_tokens',
-            label: _tr('历史窗口 Tokens', 'History window tokens'),
-            help: _tr('单会话热上下文窗口大小。', 'Token budget for the active session window.'),
+            label: _tr('历史 Token 限制', 'History Token Limit'),
+            help: _tr('热上下文中允许携带的历史记录最大阈值。', 'Maximum token allocation for hot context histories.'),
             placeholder: '4000',
           ),
           _SettingField(
             key: 'aggregation_latency',
-            label: _tr('聚合延迟', 'Aggregation latency'),
-            help: _tr('消息聚合等待时间，单位秒。', 'Debounce delay for message aggregation in seconds.'),
+            label: _tr('聚合延迟 (秒)', 'Aggregation Latency (s)'),
+            help: _tr('上游消息聚合及防抖动触发等待时间。', 'Wait duration for debounce and upstream message aggregation.'),
             placeholder: '10.0',
           ),
           _SettingField(
             key: 'system_prompt',
-            label: _tr('System Prompt', 'System prompt'),
-            help: _tr('定义助手的长期风格与边界。', 'Defines the assistant’s long-term style and operating boundary.'),
+            label: _tr('System Prompt', 'System Prompt'),
+            help: _tr('用于框定生成内容的基础规则及响应模式预设。', 'Base rules and behavioral presets for generated content.'),
             kind: _SettingFieldKind.multiline,
             rows: 10,
           ),
@@ -522,108 +523,111 @@ class DashboardPageState extends State<DashboardPage> {
       ),
       _SettingGroup(
         id: 'rag',
-        title: _tr('RAG 参数', 'RAG controls'),
+        title: _tr('RAG 配置', 'RAG Settings'),
         description: _tr(
-          '负责索引节奏、检索阈值与上下文扩展。',
-          'Tune indexing cadence, retrieval threshold, and context expansion.',
+          '设定索引同步间隔与检索宽容度。',
+          'Set synchronization intervals and retrieval tolerances.',
         ),
         fields: [
           _SettingField(
             key: 'rag_sync_cooldown',
-            label: _tr('RAG 冷却时间', 'RAG cooldown'),
-            help: _tr('后台同步的最小间隔，单位秒。', 'Minimum interval between background sync runs in seconds.'),
+            label: _tr('全量同步间隔 (秒)', 'Sync Interval (s)'),
+            help: _tr('后台构建 RAG 索引队列的最小触发频率。', 'Minimum trigger frequency for RAG background workers.'),
             placeholder: '180',
           ),
           _SettingField(
             key: 'rag_similarity_threshold',
-            label: _tr('相似度阈值', 'Similarity threshold'),
-            help: _tr('越高越严格。', 'Higher values are stricter.'),
+            label: _tr('最小分数阈值', 'Minimum Similarity Score'),
+            help: _tr('余弦相似度召回限制。', 'Baseline limitation for cosine similarity retrieval.'),
             placeholder: '0.6',
           ),
           _SettingField(
             key: 'rag_context_padding',
-            label: _tr('上下文扩展窗口', 'Context padding'),
-            help: _tr('控制 RAG 命中附近的扩展消息数。', 'Controls how many nearby messages expand around a hit.'),
+            label: _tr('段落扩展间距', 'Context Margin'),
+            help: _tr('在源节点前后延伸加载的附加消息条数。', 'Number of surrounding messages attached to a target node.'),
             placeholder: '3',
           ),
         ],
       ),
       _SettingGroup(
         id: 'agentic',
-        title: _tr('主动推送', 'Active push'),
+        title: _tr('守护进程规则', 'Daemon Rules'),
         description: _tr(
-          '控制自动分发的活跃时间与空闲阈值。',
-          'Set the active window and idle threshold for proactive delivery.',
+          '设定后台闲时任务的活跃时段与唤醒判定条件。',
+          'Configure active period rules and trigger parameters for idle polling tasks.',
         ),
         fields: [
           _SettingField(
             key: 'agentic_active_start',
-            label: _tr('活跃起始时间', 'Active start'),
-            help: _tr('24 小时制，例如 08:00。', '24-hour time, for example 08:00.'),
+            label: _tr('活跃起始时间', 'Active Window Start'),
+            help: _tr('24 小时制表示的有效服务起点（如 08:00）。', '24-hour timestamp indicating service availability start.'),
             placeholder: '08:00',
           ),
           _SettingField(
             key: 'agentic_active_end',
-            label: _tr('活跃结束时间', 'Active end'),
-            help: _tr('24 小时制，例如 23:00。', '24-hour time, for example 23:00.'),
+            label: _tr('活跃结束时间', 'Active Window End'),
+            help: _tr('24 小时制表示的服务暂停节点（如 23:00）。', '24-hour timestamp for daily service suspensions.'),
             placeholder: '23:00',
           ),
           _SettingField(
             key: 'agentic_idle_threshold',
-            label: _tr('空闲阈值（分钟）', 'Idle threshold (minutes)'),
-            help: _tr('超过这个值才触发空闲逻辑。', 'Idle logic starts after this many minutes.'),
+            label: _tr('静默容忍度 (分钟)', 'Idle Threshold (m)'),
+            help: _tr(
+              '通信静默超过该时限后解除闲时任务调度限制。',
+              'Time to wait after last transmission before unblocking idle schedulers.',
+            ),
             placeholder: '30',
           ),
         ],
       ),
       _SettingGroup(
         id: 'voice',
-        title: _tr('语音与 TTS', 'Voice and TTS'),
+        title: _tr('TTS 配置', 'TTS Config'),
         description: _tr(
-          '把语音合成链路收回到可编辑面板里。',
-          'Bring the voice synthesis path back into an editable control surface.',
+          '设定语音合成相关的服务端接口与参考样例。',
+          'Configure synthesis endpoints and reference media samples.',
         ),
         fields: [
           _SettingField(
             key: 'tts_enabled',
             label: _tr('启用 TTS', 'Enable TTS'),
-            help: _tr('控制语音输出是否打开。', 'Controls whether speech output is enabled.'),
+            help: _tr('控制系统是否调用指定的外部语音旁路。', 'Controls whether the system delegates to an external voice bypass.'),
             kind: _SettingFieldKind.toggle,
           ),
           _SettingField(
             key: 'tts_api_url',
-            label: _tr('TTS URL', 'TTS URL'),
-            help: _tr('语音服务地址。', 'Endpoint for the speech service.'),
+            label: _tr('目标端点服务器', 'Target Endpoint URL'),
+            help: _tr('执行语音合成与生成的服务地址。', 'Service address executing synthesis queries.'),
             placeholder: 'http://127.0.0.1:9880',
           ),
           _SettingField(
             key: 'tts_ref_audio_path',
-            label: _tr('参考音频路径', 'Reference audio path'),
-            help: _tr('用于克隆声音的本地音频路径。', 'Local reference audio path for voice cloning.'),
+            label: _tr('基准音源路径', 'Baseline Audio Track'),
+            help: _tr('载入用以复制音色的参考本地环境全路径 (WAV)。', 'Full local path referencing target voice templates.'),
             placeholder: '/path/to/reference.wav',
           ),
           _SettingField(
             key: 'tts_text_lang',
-            label: _tr('目标语言', 'Target language'),
-            help: _tr('输出语音的语言。', 'Language for generated speech.'),
+            label: _tr('输出目标语意', 'Output Language Target'),
+            help: _tr('指示文本转语音的目标包封语种代码。', 'Language code directing final audio generations.'),
             placeholder: 'zh',
           ),
           _SettingField(
             key: 'tts_prompt_lang',
-            label: _tr('参考语言', 'Prompt language'),
-            help: _tr('参考文本的语言。', 'Language used by the reference prompt.'),
+            label: _tr('语种分析标识', 'Prompt Locale Tag'),
+            help: _tr('用以辅助目标端点分析参考轨的语种类别。', 'Assists the endpoint in analyzing the reference media context.'),
             placeholder: 'zh',
           ),
           _SettingField(
             key: 'tts_speed_factor',
-            label: _tr('语速倍率', 'Speed factor'),
-            help: _tr('1.0 为默认速度。', '1.0 keeps the default pace.'),
+            label: _tr('渲染速率系数', 'Render Speed Factor'),
+            help: _tr('基础值为 1.0 (等宽同步)。', 'Default baseline is 1.0.'),
             placeholder: '1.0',
           ),
           _SettingField(
             key: 'tts_ref_text',
-            label: _tr('参考文本', 'Reference text'),
-            help: _tr('提供给 TTS 模型的参考文本。', 'Reference text passed into the TTS model.'),
+            label: _tr('参考提示词样本', 'Reference Transcript'),
+            help: _tr('供网络端点校准基础发音规律及停顿的引用文字。', 'Guiding strings used to profile tempo limits on target references.'),
             kind: _SettingFieldKind.multiline,
             rows: 5,
           ),
@@ -655,7 +659,7 @@ class DashboardPageState extends State<DashboardPage> {
 
   bool get _hasStatusIssue => _error != null || _settingsError != null || _logsError != null;
 
-  String get _statusTitle => _hasStatusIssue ? _tr('接口异常', 'API issue') : _tr('接口正常', 'API healthy');
+  String get _statusTitle => _hasStatusIssue ? _tr('连接异常', 'Connection Error') : _tr('连接正常', 'Connection Normal');
 
   List<String> get _statusDetails {
     final details = <String>[];
@@ -671,8 +675,8 @@ class DashboardPageState extends State<DashboardPage> {
     if (details.isEmpty) {
       details.add(
         _overview != null
-            ? _tr('Dashboard API 连接正常。', 'Dashboard API is responding normally.')
-            : _tr('正在尝试连接 Dashboard API。', 'Connecting to the dashboard API.'),
+            ? _tr('Dashboard API 连通性测试通过。', 'Dashboard API connection tests passed.')
+            : _tr(' Dashboard API 连接中...', 'Connecting to Dashboard API...'),
       );
     }
     return details;
@@ -685,8 +689,8 @@ class DashboardPageState extends State<DashboardPage> {
     final raw = error.toString();
     if (raw.contains('<!DOCTYPE') || raw.contains('Unexpected token')) {
       return _tr(
-        'Dashboard 接口返回了 HTML，而不是 JSON。',
-        'Dashboard endpoint returned HTML instead of JSON.',
+        '接口返回了非预期的 HTML 格式响应。',
+        'Endpoint returned unexpected HTML formatted response.',
       );
     }
     return raw;
@@ -748,24 +752,24 @@ class DashboardPageState extends State<DashboardPage> {
     return aside(classes: 'jaspr-sidebar', [
       div(classes: 'jaspr-brand', [
         div(classes: 'jaspr-brand__mark', [
-          span(classes: 'jaspr-rail-button__icon', [.text('✈')]),
+          const LucideIcon('send-horizontal', classes: 'jaspr-rail-button__icon'),
         ]),
       ]),
       div(classes: 'jaspr-sidebar__nav', [
         _sideNavItem(
-          icon: '▦',
+          icon: const LucideIcon('layout-dashboard', classes: 'jaspr-rail-button__icon'),
           label: _tr('概览', 'Overview'),
           active: _activeSection == _DashboardSection.overview,
           onClick: () => _changeSection(_DashboardSection.overview),
         ),
         _sideNavItem(
-          icon: '⚙',
+          icon: const LucideIcon('settings', classes: 'jaspr-rail-button__icon'),
           label: _tr('配置', 'Configure'),
           active: _activeSection == _DashboardSection.configuration,
           onClick: () => _changeSection(_DashboardSection.configuration),
         ),
         _sideNavItem(
-          icon: '≣',
+          icon: const LucideIcon('logs', classes: 'jaspr-rail-button__icon'),
           label: _tr('日志', 'Logs'),
           active: _activeSection == _DashboardSection.logs,
           onClick: () => _changeSection(_DashboardSection.logs),
@@ -777,7 +781,7 @@ class DashboardPageState extends State<DashboardPage> {
           classes: 'jaspr-theme-toggle',
           onClick: _toggleTheme,
           [
-            span(classes: 'jaspr-rail-button__icon', [.text(_theme == _DashboardTheme.dark ? '☼' : '◐')]),
+            const LucideIcon('sun-moon', classes: 'jaspr-rail-button__icon'),
             span(
               classes: 'sr-only',
               [
@@ -801,7 +805,7 @@ class DashboardPageState extends State<DashboardPage> {
         attributes: {'type': 'button'},
         onClick: _toggleStatusPopover,
         [
-          span(classes: 'jaspr-rail-button__icon', [.text('●')]),
+          const LucideIcon('circle-dot', classes: 'jaspr-rail-button__icon'),
           span(classes: 'sr-only', [.text(_statusTitle)]),
         ],
       ),
@@ -829,7 +833,7 @@ class DashboardPageState extends State<DashboardPage> {
               attributes: {'type': 'button'},
               onClick: _toggleStatusPopover,
               [
-                .text('×'),
+                const LucideIcon('x'),
                 span(classes: 'sr-only', [.text(_tr('关闭', 'Close'))]),
               ],
             ),
@@ -862,7 +866,7 @@ class DashboardPageState extends State<DashboardPage> {
           classes: 'studio-btn studio-btn--ghost studio-btn--icon studio-toolbar-btn',
           onClick: _refreshActiveSurface,
           [
-            .text('↻'),
+            const LucideIcon('refresh-cw'),
             span(classes: 'sr-only', [.text(_tr('刷新数据', 'Refresh'))]),
           ],
         ),
@@ -888,11 +892,11 @@ class DashboardPageState extends State<DashboardPage> {
     return div(classes: 'dashboard-grid', [
       div(classes: 'dashboard-column', [
         _surface(
-          eyebrow: _tr('控制面', 'Control room'),
-          title: _tr('Jaspr 面板已经重新排整。', 'The Jaspr panel is back in order.'),
+          eyebrow: _tr('概览面板', 'Overview'),
+          title: _tr('状态总览', 'Status Overview'),
           copy: _tr(
-            '现在的概览只负责总览与行动入口，不再把配置、日志、原始数据混在同一屏里。',
-            'Overview now focuses on status and next actions instead of mixing configuration, logs, and raw data in one screen.',
+            '支持高维度数据及健康度确认，全局系统配置与详细参数调节可通独立页签访问。',
+            'Supports high-level status checks and health confirmations. Configurations and logs are accessed via tabbed panels.',
           ),
           children: [
             div(classes: 'studio-actions', [
@@ -900,14 +904,14 @@ class DashboardPageState extends State<DashboardPage> {
                 classes: 'studio-btn studio-btn--primary',
                 onClick: () => _changeSection(_DashboardSection.configuration),
                 [
-                  .text(_tr('进入配置', 'Open configuration')),
+                  .text(_tr('前往配置管理', 'Manage Configurations')),
                 ],
               ),
               button(
                 classes: 'studio-btn studio-btn--ghost',
                 onClick: () => _changeSection(_DashboardSection.logs),
                 [
-                  .text(_tr('查看日志', 'Inspect logs')),
+                  .text(_tr('深入排查日志', 'Inspect System Logs')),
                 ],
               ),
             ]),
@@ -915,50 +919,50 @@ class DashboardPageState extends State<DashboardPage> {
         ),
         div(classes: 'dashboard-metrics', [
           _statCard(
-            _tr('活动会话', 'Active chats'),
+            _tr('活动会话总数', 'Active Sessions'),
             '${_chats.length}',
-            _tr('当前浏览器可见的会话数量。', 'Chats currently visible in the browser.'),
+            _tr('Dashboard 当前已载入的会话总数。', 'Chat instances currently loaded into the interface.'),
           ),
           _statCard(
-            _tr('订阅健康度', 'Subscription health'),
+            _tr('下发任务异常', 'Distribution Errors'),
             '${overview?.subscriptions.active ?? 0}/${overview?.subscriptions.total ?? 0}',
             _tr(
-              '${overview?.subscriptions.error ?? 0} 个异常源',
-              '${overview?.subscriptions.error ?? 0} sources in error',
+              '${overview?.subscriptions.error ?? 0} 项投递任务返回异常',
+              '${overview?.subscriptions.error ?? 0} remote tasks returned exceptions',
             ),
           ),
           _statCard(
-            _tr('历史窗口', 'History window'),
+            _tr('上下文缓冲上限', 'Tokens Limit'),
             '${overview?.settings.historyTokens ?? 0}',
-            _tr('影响上下文保留规模。', 'Controls active context retention.'),
+            _tr('在单次完整交互循环内设定的最大历史参考文本长度。', 'Maximum contextual token budget designated for dialogue memories.'),
           ),
           _statCard(
-            _tr('时区', 'Timezone'),
+            _tr('系统首选时区', 'Base Timezone'),
             overview?.settings.timezone ?? _t.nA,
-            _tr('用于摘要、调度与时间显示。', 'Used by summaries, scheduling, and time display.'),
+            _tr('作为计划任务队列和自动化流程等后台事件的日期校准面。', 'Running timeline reference for internal backend event schedules.'),
           ),
         ]),
         div(classes: 'dashboard-split', [
           _buildChatNavigator(
-            title: _tr('会话导航', 'Chat navigator'),
-            copy: _tr('选择一个会话作为当前工作焦点。', 'Pick a session as the current work focus.'),
+            title: _tr('运行实例选择器', 'Instance Navigator'),
+            copy: _tr('定位具体会话实体或运行历史检索详细细节。', 'Target specific entity records to inspect context references.'),
           ),
           _buildSubscriptionsPanel(),
         ]),
         if (_loadingChat)
           _loadingSurface(
-            _tr('正在装载会话焦点', 'Loading session focus'),
+            _tr('获取指定会话中...', 'Synchronizing details'),
             _tr(
-              'Prompt、摘要、最近消息和 RAG 记录会在这里同步就位。',
-              'Prompt, summary, recent messages, and RAG data are hydrating together.',
+              '从本地核心节点提取缓存的历史事件列表及参数...',
+              'Extracting persisted events and parameters from the local backend...',
             ),
           )
         else if (detail == null)
           _emptySurface(
-            _tr('还没有会话焦点', 'No session selected yet'),
+            _tr('尚未指定对象', 'No object selected'),
             _tr(
-              '先从左侧列表中选择一个会话，概览区会显示它的上下文摘要与关键动作。',
-              'Select a session from the left list to reveal its summary, prompt context, and quick actions.',
+              '请从左侧栏选择目标容器，获取其参数及控制台。',
+              'Please select an object from the left list. The panel will render specific endpoints.',
             ),
           )
         else
@@ -975,11 +979,11 @@ class DashboardPageState extends State<DashboardPage> {
   Component _buildOverviewFocus(ChatDetail detail) {
     return div(classes: 'dashboard-column', [
       _surface(
-        eyebrow: _tr('当前会话', 'Current session'),
+        eyebrow: _tr('当前会话', 'Current Session'),
         title: detail.label,
         copy: _tr(
-          '概览层只保留决策所需的信息：会话属性、关键指标和下一步动作。',
-          'Overview keeps only the information needed for decisions: session identity, key metrics, and next actions.',
+          '列出当前选中对象的会话属性与核心运行数据。',
+          'Lists dialogue properties and core runtime metrics for the selected object.',
         ),
         children: [
           div(classes: 'studio-chip-row', [
@@ -1018,7 +1022,7 @@ class DashboardPageState extends State<DashboardPage> {
               classes: 'studio-btn studio-btn--ghost',
               onClick: () => _selectChat(detail.chatId),
               [
-                .text(_tr('刷新这个会话', 'Refresh this session')),
+                .text(_tr('重新读取缓存', 'Reload Cache')),
               ],
             ),
             button(
@@ -1032,7 +1036,7 @@ class DashboardPageState extends State<DashboardPage> {
               classes: 'studio-btn studio-btn--ghost',
               onClick: () => _changeSection(_DashboardSection.logs),
               [
-                .text(_tr('去日志页深挖', 'Inspect in logs')),
+                .text(_tr('检视底层日志', 'Inspect Logs')),
               ],
             ),
           ]),
@@ -1040,12 +1044,17 @@ class DashboardPageState extends State<DashboardPage> {
       ),
       div(classes: 'dashboard-split', [
         _surface(
-          eyebrow: _tr('摘要', 'Summary'),
-          title: _tr('归档记忆快照', 'Archived memory snapshot'),
-          copy: _tr('给你一眼看懂当前会话的长期记忆。', 'A compressed read of the long-term memory for this session.'),
+          eyebrow: _tr('信息归档', 'Summary Archive'),
+          title: _tr('长期记忆状态', 'Long-term Memory State'),
+          copy: _tr(
+            '展示由引擎后台自动生成的对话压缩快照。',
+            'Displays the dialogue compression snapshot automatically generated by the background engine.',
+          ),
           children: [
             _copyBlock(
-              detail.summary.content.isEmpty ? _tr('还没有摘要内容。', 'No archived summary yet.') : detail.summary.content,
+              detail.summary.content.isEmpty
+                  ? _tr('当前对象尚无压缩记录。', 'No compressed records exist yet.')
+                  : detail.summary.content,
             ),
             div(classes: 'studio-kv-list', [
               _kvRow(_tr('最后摘要 ID', 'Last summarized id'), '${detail.summary.lastSummarizedId}'),
@@ -1054,20 +1063,20 @@ class DashboardPageState extends State<DashboardPage> {
           ],
         ),
         _surface(
-          eyebrow: _tr('Prompt', 'Prompt'),
-          title: _tr('当前组合预览', 'Current composition preview'),
+          eyebrow: _tr('推理组装', 'Prompt Formulation'),
+          title: _tr('运行时组装示例', 'Runtime Composition Example'),
           copy: _tr(
-            '这里只保留关键片段，完整原始内容在日志页查看。',
-            'Overview keeps only the important excerpts. Use Logs for the full raw content.',
+            '撷取部分发往上游模型的提示词边界样本。',
+            'Excerpts a partial boundary sample of the prompt payload sent upstream.',
           ),
           children: [
             _codeBlock(
-              _tr('系统协议', 'System protocol'),
-              _clipText(_promptPreview?.systemProtocol ?? _tr('还没有 Prompt 预览。', 'No prompt preview yet.'), 700),
+              _tr('硬编码系统级指引', 'Hardcoded system protocol'),
+              _clipText(_promptPreview?.systemProtocol ?? _tr('未检测到预览负载。', 'No preview payload detected.'), 700),
             ),
             _codeBlock(
-              _tr('动态记忆', 'Dynamic memory'),
-              _clipText(_promptPreview?.memoryContext ?? _tr('还没有动态记忆内容。', 'No dynamic memory available yet.'), 520),
+              _tr('短时记忆队列注入', 'Short-term memory hook'),
+              _clipText(_promptPreview?.memoryContext ?? _tr('短时记忆上下文为空。', 'Short-term context is empty.'), 520),
             ),
           ],
         ),
@@ -1079,11 +1088,11 @@ class DashboardPageState extends State<DashboardPage> {
     return div(classes: 'dashboard-grid', [
       div(classes: 'dashboard-column', [
         _surface(
-          eyebrow: _tr('配置', 'Configuration'),
-          title: _tr('配置能力已经接回 Dashboard。', 'Configuration is back inside the dashboard.'),
+          eyebrow: _tr('参数配置', 'Configuration'),
+          title: _tr('全量环境设置', 'Global Settings'),
           copy: _tr(
-            '这层只负责“编辑、保存、反馈”。信息被按职责拆成多组，不再只是只读快照。',
-            'This layer is dedicated to editing, saving, and feedback. Settings are grouped by responsibility instead of staying as read-only snapshots.',
+            '提供应用运行所需的核心参数修改。包含服务路由、上下文选项及定时调度模块。',
+            'Supports core parameter overrides, providing access to routing, context, and schedule settings.',
           ),
           children: [
             div(classes: 'studio-chip-row', [
@@ -1216,30 +1225,30 @@ class DashboardPageState extends State<DashboardPage> {
     return div(classes: 'dashboard-log-grid', [
       _buildChatNavigator(
         title: _tr('日志对象', 'Log scope'),
-        copy: _tr('日志页依赖当前选中的会话来切换最近对话与 RAG 记录。', 'Conversation and RAG logs follow the currently selected session.'),
+        copy: _tr('各面板将按选中实例过滤对应记录。', 'Log panels will filter records based on the selected instance.'),
       ),
       div(classes: 'dashboard-column', [
         _surface(
-          eyebrow: _tr('日志', 'Logs'),
-          title: _tr('把日志拆回明确的职责区。', 'Logs are split back into clear responsibility lanes.'),
+          eyebrow: _tr('全链路日志', 'System Logs'),
+          title: _tr('分层审计视图', 'Layered Auditing Views'),
           copy: _tr(
-            '最近对话记录、RAG 记录和系统 log 不再互相挤压，而是各自成为独立的审计视图。',
-            'Recent conversations, RAG records, and system logs now live in separate audit views instead of fighting for the same space.',
+            '应用日志由系统引擎层、业务消息及 RAG 索引构成，使用不同页签进行分类查阅。',
+            'Logs consist of the engine layer, business queues, and RAG indexing. Select tabs to audit separately.',
           ),
           children: [
             div(classes: 'studio-segments', [
               _segmentButton(
-                label: _tr('最近对话记录', 'Recent conversations'),
+                label: _tr('消息队列', 'Message Queue'),
                 active: _activeLogPane == _LogPane.conversations,
                 onClick: () => _changeLogPane(_LogPane.conversations),
               ),
               _segmentButton(
-                label: _tr('RAG 记录', 'RAG records'),
+                label: _tr('RAG 索引', 'RAG Index'),
                 active: _activeLogPane == _LogPane.rag,
                 onClick: () => _changeLogPane(_LogPane.rag),
               ),
               _segmentButton(
-                label: _tr('系统 Log', 'System log'),
+                label: _tr('系统引擎', 'Engine Service'),
                 active: _activeLogPane == _LogPane.system,
                 onClick: () => _changeLogPane(_LogPane.system),
               ),
@@ -1257,9 +1266,9 @@ class DashboardPageState extends State<DashboardPage> {
   Component _buildLogPaneSurface() {
     if (_activeLogPane == _LogPane.system) {
       return _surface(
-        eyebrow: _tr('系统', 'System'),
-        title: _tr('系统运行日志', 'Runtime log'),
-        copy: _tr('保留原始 tail，但给足刷新与路径提示。', 'Keep the raw tail, but add clear refresh and path context.'),
+        eyebrow: _tr('系统引擎', 'Engine'),
+        title: _tr('进程输出流', 'Standard Streams'),
+        copy: _tr('引擎主进程相关的标准错误与调试输出。', 'Standard output and error streams originating from the host engine process.'),
         children: [
           div(classes: 'studio-actions', [
             button(
@@ -1323,11 +1332,11 @@ class DashboardPageState extends State<DashboardPage> {
   Component _buildConversationLogSurface(ChatDetail detail) {
     final page = _messagePage;
     return _surface(
-      eyebrow: _tr('最近对话记录', 'Recent conversations'),
+      eyebrow: _tr('消息队列', 'Message Queue'),
       title: detail.label,
       copy: _tr(
-        '这里直接展示原始消息内容，不再裁成摘要碎片。',
-        'This view shows raw conversation records instead of clipping them into tiny previews.',
+        '展示当前实例上报的所有历史交互报文，支持分页检视与跟踪。',
+        'Displays raw interaction sequences connected to this instance, enabling payload tracing and pagination.',
       ),
       children: [
         _pager(
@@ -1361,11 +1370,11 @@ class DashboardPageState extends State<DashboardPage> {
   Component _buildRagLogSurface(ChatDetail detail) {
     final page = _ragPage;
     return _surface(
-      eyebrow: 'RAG',
+      eyebrow: _tr('RAG 索引', 'RAG Index'),
       title: detail.label,
       copy: _tr(
-        '这里直接看索引后的结果与源内容，不再和系统 log 挤在一起。',
-        'This view keeps indexed results and their source content separate from the runtime log.',
+        '此视图关联当前对话的知识库匹配状态与被引用的源切片信息。',
+        'Links to retrieved knowledge vector states and text excerpts referenced by this dialogue context.',
       ),
       children: [
         div(classes: 'studio-actions', [
@@ -1548,11 +1557,11 @@ class DashboardPageState extends State<DashboardPage> {
 
   Component _buildQuickActionsRail() {
     return _surface(
-      eyebrow: _tr('动作', 'Actions'),
-      title: _tr('下一步操作', 'Next actions'),
+      eyebrow: _tr('快速指令', 'Quick Actions'),
+      title: _tr('操作项', 'Operations'),
       copy: _tr(
-        '把常用动作固定在右侧，不再把它们塞在一堆内容卡片之间。',
-        'Keep the most common actions pinned on the side instead of burying them inside dense cards.',
+        '提供常用的页面跳转及数据刷新入口。',
+        'Provides quick access to primary views and data refreshes.',
       ),
       children: [
         div(classes: 'dashboard-column', [
@@ -1586,11 +1595,11 @@ class DashboardPageState extends State<DashboardPage> {
     final dirty = _dirtySettings.entries.toList();
 
     return _surface(
-      eyebrow: _tr('配置摘要', 'Configuration summary'),
-      title: _tr('改动追踪', 'Change tracking'),
+      eyebrow: _tr('配置状态', 'Configuration State'),
+      title: _tr('未保存项提要', 'Pending Changes'),
       copy: _tr(
-        '这里帮助你确认改了什么，不会把整页表单再重复一遍。',
-        'This rail helps confirm what changed without repeating the full form.',
+        '列出当前未提交的系统级参数变更快照。',
+        'Lists uncommitted changes to system-level configuration parameters.',
       ),
       children: [
         div(classes: 'studio-kv-list', [
@@ -1623,30 +1632,33 @@ class DashboardPageState extends State<DashboardPage> {
 
   Component _buildConfigTipsRail() {
     return _surface(
-      eyebrow: _tr('说明', 'Notes'),
-      title: _tr('配置约束', 'Configuration notes'),
+      eyebrow: _tr('帮助说明', 'Documentation'),
+      title: _tr('参数存储机制', 'Storage Mechanisms'),
       copy: _tr(
-        '这次重构先把现有后端已支持的配置项完整接回前端。',
-        'This redesign first restores the settings that are already supported by the backend.',
+        '提示不同类目下的配置保存及应用生效范围。',
+        'Details the scope and lifecycle of configuration persistence.',
       ),
       children: [
         div(classes: 'dashboard-column', [
           _tipCard(
-            _tr('分组保存', 'Save by group'),
+            _tr('独立提交流程', 'Independent Commits'),
             _tr(
-              '模型、RAG、主动推送和语音配置互不干扰，保存时只提交当前组。',
-              'Models, RAG, active push, and voice settings save independently by group.',
+              '各项配置采用分组提交机制，提交时仅影响当前视图所在的应用组。',
+              'Configurations commit independently by group, isolating changes to their specific context.',
             ),
           ),
           _tipCard(
-            _tr('即时反馈', 'Immediate feedback'),
-            _tr('保存成功后会回到顶部通知区，同时刷新概览数据。', 'Successful saves surface in the notice area and refresh overview data.'),
+            _tr('无缝重载', 'Seamless Reloads'),
+            _tr(
+              '参数覆写成功后将实时更新至主控节点内存池。',
+              'Successful parameter overrides automatically rehydrate into the engine memory pool.',
+            ),
           ),
           _tipCard(
-            _tr('保守写回', 'Conservative writeback'),
+            _tr('后验校验', 'Post-validation'),
             _tr(
-              '这里只复用后端已有的 PATCH /api/settings，不额外发明新的配置协议。',
-              'The UI reuses the existing PATCH /api/settings path instead of inventing a new config protocol.',
+              '所有字段受服务端配置结构规约，异常输入将被接口拒绝。',
+              'Inputs map directly to the backend settings schema; illegal values will be rejected upstream.',
             ),
           ),
         ]),
@@ -1787,7 +1799,7 @@ class DashboardPageState extends State<DashboardPage> {
   }
 
   Component _sideNavItem({
-    required String icon,
+    required Component icon,
     required String label,
     required bool active,
     required VoidCallback onClick,
@@ -1796,7 +1808,7 @@ class DashboardPageState extends State<DashboardPage> {
       classes: 'jaspr-nav-item${active ? ' is-active' : ''}',
       onClick: onClick,
       [
-        span(classes: 'jaspr-rail-button__icon', [.text(icon)]),
+        icon,
         span(classes: 'sr-only', [.text(label)]),
       ],
     );

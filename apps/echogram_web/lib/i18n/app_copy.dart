@@ -18,129 +18,127 @@ class AppCopy {
 
   String get brandLabel => 'Echogram Web';
   String get navHome => isZh ? '首页' : 'Home';
-  String get navDashboard => isZh ? 'Dashboard' : 'Dashboard';
-  String get navTelegramHint => isZh ? 'Telegram 保留会话内快捷操作' : 'Telegram keeps quick in-chat actions';
+  String get navDashboard => 'Dashboard';
+  String get navTelegramHint => isZh ? 'Telegram 快捷操作' : 'Telegram actions';
   String get shellDescription =>
-      isZh ? '面向 Prompt、RAG、日志与运维的本地优先控制台。' : 'Local-first control surface for prompts, RAG, logs, and operations.';
-  String get autoLanguageBadge => isZh ? '自动：中文' : 'Auto: English';
+      isZh ? '支持日志管理与系统配置的 Bot 控制台。' : 'Observability and configuration dashboard for conversational bots.';
+  String get autoLanguageBadge => isZh ? '语言：自动' : 'Language: Auto';
 
   String get homeHeroTitle => isZh
-      ? '一个以 Telegram 为入口、以浏览器为控制面的本地优先 Bot 工作台。'
-      : 'A Telegram-native bot stack with a browser-grade control surface.';
+      ? '集成浏览器面板的本地优先 Telegram Bot'
+      : 'A local-first Telegram bot with an integrated browser dashboard';
   String get homeHeroBody => isZh
-      ? 'Echogram 把快操作保留在 Telegram 里，把更重的检查、诊断与运维搬到本地浏览器面板。'
-      : 'Echogram keeps fast actions inside Telegram, then moves visibility, diagnostics, and heavier operations into a local browser dashboard.';
+      ? '基于 Telegram 提供消息交互功能，通过本地 Web 仪表盘提供详尽的系统日志采集、RAG 测试纠错及核心系统参数配置。'
+      : 'Provides essential messaging in Telegram, while supporting system logs, RAG audits, and global configurations through a local dashboard.';
   String get openDashboard => isZh ? '打开 Dashboard' : 'Open Dashboard';
-  String get localApiBridge => isZh ? 'Python 与 Dart 之间的本地 API 边界' : 'Local API bridge between Python and Dart';
+  String get localApiBridge => isZh ? '基于本地 API 通信' : 'Local API Bridge';
 
-  String get dashboardCtaEyebrow => isZh ? '下一步' : 'Next step';
-  String get dashboardCtaTitle => isZh ? '真正的工作台在 Dashboard。' : 'The real operating surface lives in Dashboard.';
+  String get dashboardCtaEyebrow => isZh ? '核心特性' : 'Core features';
+  String get dashboardCtaTitle => isZh ? 'Dashboard 面板' : 'Dashboard Panel';
   String get dashboardCtaBody => isZh
-      ? '首页负责传达 Echogram 的边界与架构；日志、Prompt 检查、RAG 审计和配置操作都应该进入独立的 Dashboard 页面。'
-      : 'Home introduces the product boundary. Logs, prompt inspection, RAG audits, and configuration belong in a dedicated dashboard.';
-  String get dashboardCtaPrimary => isZh ? '进入 Dashboard' : 'Open Dashboard';
+      ? '提供独立的控制页面。支持查询服务异常报错日志、翻阅历史 Prompt 调用明细，以及调节系统长效运作所需的各类设定。'
+      : 'Access independent controls. Supports querying error logs, tracing historical prompt structures, and tuning variables for extended operations.';
+  String get dashboardCtaPrimary => isZh ? '进入 Dashboard' : 'Enter Dashboard';
   String get dashboardCtaSecondary =>
-      isZh ? '即使后端还没连上，也会先渲染完整界面骨架' : 'The dashboard skeleton renders before the backend connects';
+      isZh ? '支持离线场景下的 UI 骨架加载' : 'Supports fallback offline UI loading';
 
-  String get operatingModel => isZh ? '运行结构' : 'Operating model';
-  String get threeLayersTitle => isZh ? '三层结构，一条控制链。' : 'Three layers, one control loop.';
+  String get operatingModel => isZh ? '系统架构' : 'System architecture';
+  String get threeLayersTitle => isZh ? '三端分离设计' : 'Decoupled triple-layer design';
 
   String get stackTelegramTitle => 'Telegram';
   String get stackTelegramBody =>
-      isZh ? '保留 edit、preview 一类贴近对话的即时操作。' : 'Keeps fast, conversational actions like edit and preview.';
-  String get stackTelegramFooter => isZh ? '快操作留在消息发生的地方。' : 'Keep fast actions where the messages already live.';
+      isZh ? '提供主会话流程交互及即时性轻量请求处理。' : 'Handles primary chat flows and immediate lightweight requests.';
+  String get stackTelegramFooter => isZh ? '主要的会话视图' : 'Main session view';
 
-  String get stackBackendTitle => isZh ? '本地 Python 后端' : 'Local Python backend';
+  String get stackBackendTitle => 'Python 服务端';
   String get stackBackendBody =>
-      isZh ? '负责持久化、RAG、日志、定时任务与 Telegram 编排。' : 'Owns persistence, RAG, logs, schedulers, and Telegram orchestration.';
-  String get stackBackendFooter => isZh ? '这里仍然是系统真相来源。' : 'This stays the source of truth.';
+      isZh ? '实现数据持久化同步、文档检索生成引擎及后台计划任务管理。' : 'Implements persistence sync, retrieval engines, and task schedules.';
+  String get stackBackendFooter => isZh ? '核心处理节点' : 'Core processing node';
 
-  String get stackWebTitle => 'Echogram Web';
+  String get stackWebTitle => 'Web 控制台';
   String get stackWebBody =>
-      isZh ? '负责可视化、诊断、审计与更重的配置流程。' : 'Handles visibility, diagnostics, audits, and heavier configuration flows.';
-  String get stackWebFooter => isZh ? '这是未来可以继续扩展的浏览器层。' : 'This is the browser layer users can grow with.';
+      isZh ? '适配桌面及移动端大尺寸视口，实现可视化图表及运行态调试。' : 'Adapts to larger viewports for data visualization and runtime debugging.';
+  String get stackWebFooter => isZh ? '可视化面板' : 'Visual admin panel';
 
-  String get reasonTelegramSharpTitle => isZh ? 'Telegram 保持锋利' : 'Telegram stays sharp';
+  String get reasonTelegramSharpTitle => isZh ? '即时短反馈流' : 'Immediate short feedbacks';
   String get reasonTelegramSharpBody => isZh
-      ? '短、快、贴近上下文的操作继续留在会话里，速度最快，也最自然。'
-      : 'Short, contextual actions stay in the conversation where they are fastest and most natural.';
+      ? '支持将动态评级修正和运行模式覆写指令嵌入会话上下文，降低交互损耗。'
+      : 'Supports embedding dynamic ratings and modifications directly in context, reducing interaction costs.';
 
-  String get reasonBrowserHeavyTitle => isZh ? '浏览器承接重操作' : 'Browser takes the heavy load';
+  String get reasonBrowserHeavyTitle => isZh ? '全场景大范围监控' : 'Full-scope observability';
   String get reasonBrowserHeavyBody => isZh
-      ? 'Prompt 检查、日志、RAG 审计和订阅健康度更适合放在多面板、可滚动、可比较的桌面界面里。'
-      : 'Prompt inspection, logs, RAG audits, and subscription health fit better in a richer desktop browser surface.';
+      ? '由于涉及多表联查与深层文本结构，建议在拥有充分横向屏幕空间的客户端上处理审查任务。'
+      : 'Due to multi-table relations and deep text constraints, log audits are better served on wide desktop surfaces.';
 
-  String get reasonSharedCoreTitle => isZh ? '一套 Dart Core，多种前端' : 'One Dart core, many surfaces';
+  String get reasonSharedCoreTitle => isZh ? '跨端组件兼容' : 'Cross-platform compatibility';
   String get reasonSharedCoreBody => isZh
-      ? 'Jaspr 现在复用它，未来 Flutter 也可以直接复用同一套数据契约与共享逻辑。'
-      : 'Jaspr uses the shared Dart core today, and Flutter can reuse the same contracts later.';
+      ? '内部共享 Dart SDK 解析结构。允许当前 Web 服务与未来多平台客户端共享模型状态。'
+      : 'Shares Dart SDK internals. Enables the web codebase and future mobile apps to share data models safely.';
 
-  String get splitEyebrow => isZh ? '职责边界' : 'Surface split';
+  String get splitEyebrow => isZh ? '功能流向' : 'Feature flow';
   String get splitTitle =>
-      isZh ? '哪些操作留在 Telegram，哪些进入 Dashboard。' : 'What stays in Telegram versus what moves into the dashboard.';
-  String get keepInTelegram => isZh ? '保留在 Telegram' : 'Keep in Telegram';
-  String get moveIntoDashboard => isZh ? '进入 Dashboard' : 'Move into Dashboard';
+      isZh ? '操作层级边界说明' : 'Operation boundary specifications';
+  String get keepInTelegram => isZh ? 'Telegram 端控制' : 'Telegram scopes';
+  String get moveIntoDashboard => isZh ? 'Dashboard 端管理' : 'Dashboard scopes';
 
   List<String> get telegramItems => isZh
       ? const [
-          '/edit 与 /preview',
-          '消息级修正和快速删除',
-          '贴着会话流的即时反馈与控制',
+          '行内短指令解析 (/edit, /preview)',
+          '基于触发器的动作执行',
+          '当前节点预设参数覆写',
         ]
       : const [
-          '/edit and /preview',
-          'Fast message-level fixes and deletes',
-          'Immediate controls that live inside the chat flow',
+          'Inline short commands (/edit, /preview)',
+          'Trigger-based executions',
+          'Current node parameter overrides',
         ];
 
   List<String> get dashboardItems => isZh
       ? const [
-          'Prompt 组合与记忆可视化',
-          'RAG 审计与重建操作',
-          '日志、配置与运行健康度',
+          'Prompt 构成明细及回放校验',
+          'RAG 内部索引与召回结果审计',
+          '全局配置修改与异常情况排查',
         ]
       : const [
-          'Prompt composition and memory visibility',
-          'RAG audits and rebuild actions',
-          'Logs, configuration, and runtime health',
+          'Prompt composition and replay checks',
+          'RAG index and retrieval audits',
+          'Global config tuning and anomaly checks',
         ];
 
-  String get architectureEyebrow => isZh ? '长期架构' : 'Long-term architecture';
-  String get architectureTitle => isZh ? '为什么 Jaspr + Flutter 是更长线的选择。' : 'Why Jaspr + Flutter is the right long game.';
-  String get architectureFlowEyebrow => isZh ? '架构流' : 'Architecture flow';
+  String get architectureEyebrow => isZh ? '代码结构' : 'Repository structure';
+  String get architectureTitle => isZh ? '模块化解耦模式' : 'Modular decoupling patterns';
+  String get architectureFlowEyebrow => isZh ? '运行拓扑' : 'Runtime topology';
   String get architectureFlowTitle =>
-      isZh ? '从 Telegram Bot 到独立客户端的演进路径。' : 'The path from Telegram bot to standalone client.';
+      isZh ? '多节点功能拆解' : 'Multi-node feature isolation';
 
-  String get flowTelegramNodeTitle => isZh ? 'Telegram 会话面' : 'Telegram session surface';
+  String get flowTelegramNodeTitle => 'Telegram UI';
   String get flowTelegramNodeBody =>
-      isZh ? '保留 edit、preview 等贴近对话流的快捷操作。' : 'Keeps edit, preview, and other chat-native shortcuts.';
-  String get flowBackendNodeTitle => isZh ? 'Python 核心后端' : 'Python core backend';
+      isZh ? '即时消息通道前端' : 'Instant message frontend channel';
+  String get flowBackendNodeTitle => 'Python 执行后台';
   String get flowBackendNodeBody =>
-      isZh ? '统一负责持久化、RAG、日志、调度与 Telegram 编排。' : 'Owns persistence, RAG, logs, schedulers, and Telegram orchestration.';
-  String get flowWebNodeTitle => 'Echogram Web';
+      isZh ? '应用引擎与数据库宿主' : 'Engine core and database host';
+  String get flowWebNodeTitle => 'Web 控制应用';
   String get flowWebNodeBody =>
-      isZh ? '浏览器控制台，承接诊断、可视化与重操作。' : 'Browser control surface for diagnostics, visibility, and heavier operations.';
-  String get flowFlutterNodeTitle => isZh ? '未来 Flutter 客户端' : 'Future Flutter client';
+      isZh ? '运行态状态观测工具' : 'Runtime observability tooling';
+  String get flowFlutterNodeTitle => '支持前端拓展';
   String get flowFlutterNodeBody => isZh
-      ? '当 Echogram 变成独立产品时，可以直接复用同一套 Dart Core。'
-      : 'Reuses the same Dart core when Echogram grows into a standalone product.';
-  String get flowCoreTitle => isZh ? '共享 Dart Core' : 'Shared Dart Core';
+      ? '提供多端部署一致性可能' : 'Provides options for platform parity';
+  String get flowCoreTitle => '公共 Dart SDK';
   String get flowCoreBody => isZh
-      ? '模型、API 客户端与共享逻辑写一次，同时服务 Jaspr 与未来 Flutter。'
-      : 'Models, API clients, and shared logic are written once for Jaspr now and Flutter later.';
+      ? '通信解析格式及类型系统' : 'API parsing formats and type bounds';
 
   List<String> get architectureSteps => isZh
       ? const [
-          'Pure Dart Core 负责统一的数据契约与共享逻辑。',
-          'Jaspr 输出真实 HTML/CSS，很适合桌面浏览器运维界面。',
-          '未来 Flutter 可以直接复用同一套数据模型与 API 客户端。',
-          '本地 API 边界让 Python 与 UI 可以独立演进。',
+          '提取基础网络处理及请求反推导为独立的 Core 服务，减少跨项目重复实现损耗。',
+          '渲染中心目前基于 Jaspr 构建，生成对搜索引擎与爬虫友好的语义化静态树。',
+          '如果开启移动端需求分流，现有处理逻辑层无需改动即可在 Flutter 中直接编译。',
+          '前后端分工明确，前端页面迭代速度完全脱离后端应用逻辑周期绑定。',
         ]
       : const [
-          'Pure Dart core holds typed API contracts and shared orchestration.',
-          'Jaspr renders real HTML and CSS, which fits browser-native operational UIs.',
-          'Flutter can later reuse the same models and API client without redoing contracts.',
-          'The local API seam lets Python and the UI evolve independently.',
+          'Extracts fundamental networking and parsing into a standalone Core service to avoid rewrites.',
+          'Renders UI heavily via Jaspr, yielding semantic static trees that are lightweight and standards-compliant.',
+          'If mobile scaling starts, existing processing layers compile seamlessly on Flutter with no friction.',
+          'Hard front/back separation prevents lifecycle blockages during frontend iterations.',
         ];
 
   String get nA => isZh ? '暂无' : 'n/a';

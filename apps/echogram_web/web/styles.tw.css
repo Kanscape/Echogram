@@ -1221,10 +1221,24 @@ body {
   display: none;
 }
 
+.lucide-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+}
+
 .jaspr-rail-button__icon {
-  font-size: 1.1rem;
-  font-weight: 700;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.jaspr-rail-button__icon .lucide-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .sr-only {
@@ -1291,6 +1305,12 @@ body {
   border-radius: 8px;
   border-color: transparent;
   background: transparent;
+}
+
+.studio-toolbar-btn .lucide-icon,
+.jaspr-status-modal__close .lucide-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .studio-toolbar-btn:hover:not(:disabled) {
@@ -1637,14 +1657,15 @@ body {
   }
 
   .jaspr-status-modal__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 32px;
     height: 32px;
     border-radius: 8px;
     border: 1px solid var(--studio-border);
     background: var(--studio-surface-alt);
     color: var(--studio-text);
-    font-size: 1rem;
-    line-height: 1;
   }
 
   .dashboard-grid,
