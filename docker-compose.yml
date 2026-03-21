@@ -15,6 +15,7 @@ services:
       - "${ECHOGRAM_API_BIND:-127.0.0.1}:${ECHOGRAM_API_PORT:-8765}:8765"
     volumes:
       - ./data:/app/data
+      - ./extensions:/app/extensions
       - ./logs:/app/logs
     healthcheck:
       test:

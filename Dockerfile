@@ -17,12 +17,13 @@ COPY backend ./backend
 COPY config ./config
 COPY core ./core
 COPY dashboard ./dashboard
+COPY extensions ./extensions
 COPY extractors ./extractors
 COPY models ./models
 COPY utils ./utils
 COPY main.py ./
 
-RUN mkdir -p /app/data /app/logs
+RUN mkdir -p /app/data /app/logs /app/extensions
 
 EXPOSE 8765
 
