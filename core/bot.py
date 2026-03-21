@@ -8,6 +8,7 @@ from utils.logger import logger
 # 引入模型以确保建表
 import models 
 from core.news_push_service import news_push_service
+from core.extensions.runtime import extension_runtime_service
 
 # 全局 Bot 实例，供服务层（如 RAG）在无 Context 场景下使用
 bot = None
@@ -67,8 +68,19 @@ async def post_init(application: Application):
             name="rag_sync_loop"
         )
         logger.info("RAG Sync: Scheduler registered (Interval: 120s)")
+
+        async def extension_scheduler_wrapper(context):
+            await extension_runtime_service.run_scheduled_triggers()
+
+        application.job_queue.run_repeating(
+            extension_scheduler_wrapper,
+            interval=300,
+            first=45,
+            name="extension_scheduler_loop"
+        )
+        logger.info("Extensions: Scheduler registered (Interval: 300s)")
     else:
-        logger.warning("JobQueue not available! RAG & NewsPush will not auto-run.")
+        logger.warning("JobQueue not available! RAG, NewsPush, and Extensions will not auto-run.")
 
     await start_echogram_web_api()
 

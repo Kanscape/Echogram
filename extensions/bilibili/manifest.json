@@ -1,0 +1,115 @@
+{
+  "id": "bilibili",
+  "name": "Bilibili",
+  "version": "0.1.0",
+  "purpose": "为 Echogram 提供 Bilibili 链接识别、中文字幕提取与视频内容摘要能力。",
+  "description": "当聊天中出现 Bilibili 或 b23.tv 视频链接时，优先提取中文字幕；如果拿不到字幕，则回退到下载低清 MP4 并调用多模态模型生成摘要。",
+  "author": "Echogram",
+  "homepage": "https://github.com/Kanscape/Echogram",
+  "enabled": false,
+  "permissions": [
+    "network:https",
+    "llm:summary",
+    "llm:multimodal"
+  ],
+  "tools": [
+    {
+      "name": "bilibili_get_video_summary",
+      "description": "获取指定 Bilibili 视频的摘要，优先使用 CC 中文字幕，失败时回退到多模态视频摘要。",
+      "read_only": true
+    }
+  ],
+  "triggers": [
+    {
+      "name": "bilibili_link_listener",
+      "type": "scoped_passive",
+      "description": "当文本聊天里出现 Bilibili 或 b23.tv 视频链接时触发。",
+      "scopes": [
+        "text_chat"
+      ],
+      "match": {
+        "regex": [
+          "(?:b23\\.tv/[A-Za-z0-9]+|bilibili\\.com/[^\\s<>()]*(?:BV[0-9A-Za-z]{10}|av\\d+))"
+        ]
+      }
+    },
+    {
+      "name": "bilibili_recent_summary",
+      "type": "scoped_passive",
+      "description": "主动消息生成前注入最近的 Bilibili 摘要。",
+      "scopes": [
+        "proactive_message"
+      ]
+    },
+    {
+      "name": "bilibili_cache_maintenance",
+      "type": "global_scheduled",
+      "description": "定时清理过期的 Bilibili 摘要缓存。",
+      "schedule": "6h"
+    }
+  ],
+  "config_schema": {
+    "fields": [
+      {
+        "key": "sessdata",
+        "label": "SESSDATA",
+        "type": "text",
+        "required": false,
+        "secret": true,
+        "help": "可选。提供 Bilibili 登录 Cookie 中的 SESSDATA，能提升字幕获取成功率。",
+        "placeholder": "留空也可运行"
+      },
+      {
+        "key": "summary_cache_hours",
+        "label": "Summary Cache Hours",
+        "type": "text",
+        "required": false,
+        "secret": false,
+        "help": "同一 BV 摘要在数据库里缓存多久，默认 24 小时。",
+        "placeholder": "24"
+      },
+      {
+        "key": "proactive_recent_hours",
+        "label": "Proactive Recent Hours",
+        "type": "text",
+        "required": false,
+        "secret": false,
+        "help": "主动消息注入时回看最近多少小时的 Bilibili 摘要，默认 6 小时。",
+        "placeholder": "6"
+      },
+      {
+        "key": "video_max_megabytes",
+        "label": "Video Max MB",
+        "type": "text",
+        "required": false,
+        "secret": false,
+        "help": "回退到下载低清视频时允许的最大文件大小，默认 48MB。",
+        "placeholder": "48"
+      }
+    ]
+  },
+  "dashboard": {
+    "panels": [
+      {
+        "slot": "extensions.detail.overview",
+        "kind": "markdown",
+        "title": "Overview"
+      },
+      {
+        "slot": "extensions.detail.tools",
+        "kind": "tool_table",
+        "title": "Tools"
+      },
+      {
+        "slot": "extensions.detail.config",
+        "kind": "schema_form",
+        "title": "Configuration"
+      },
+      {
+        "slot": "extensions.detail.activity",
+        "kind": "invocation_table",
+        "title": "Activity"
+      }
+    ]
+  }
+}

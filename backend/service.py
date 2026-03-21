@@ -9,11 +9,18 @@ from sqlalchemy import and_, desc, func, select
 from config.database import get_db_session
 from config.settings import settings
 from core.config_service import config_service
+from core.extensions import (
+    ExtensionInstallError,
+    extension_installer,
+    extension_registry,
+    extension_storage_service,
+)
 from core.history_service import history_service
 from core.media_service import media_service
 from core.news_push_service import news_push_service
 from core.rag_service import rag_service
 from core.summary_service import summary_service
+from models.extension import ExtensionRecord, ExtensionSetting
 from models.history import History
 from models.news import ChatSubscription, NewsSubscription
 from models.rag_status import RagStatus
@@ -76,7 +83,139 @@ async def _load_whitelist_map() -> dict[int, Whitelist]:
         return {item.chat_id: item for item in items}
 
 
+def _extension_script_path(local_path: str) -> str:
+    if not local_path:
+        return ""
+    return os.path.join(local_path, "extension.py")
+
+
+def _record_preview(text: str, limit: int = 280) -> str:
+    content = (text or "").strip()
+    return content if len(content) <= limit else f"{content[: limit - 3]}..."
+
+
 class EchogramWebService:
+    async def _serialize_extension(self, manifest) -> dict[str, Any]:
+        enabled = await extension_storage_service.get_extension_enabled(
+            manifest.id,
+            default=bool(manifest.enabled),
+        )
+        script_path = _extension_script_path(manifest.local_path)
+
+        async for session in get_db_session():
+            config_value_count = int(
+                (
+                    await session.execute(
+                        select(func.count(ExtensionSetting.id)).where(
+                            ExtensionSetting.extension_id == manifest.id,
+                            ExtensionSetting.scope_type == "global",
+                            ExtensionSetting.scope_id == 0,
+                        )
+                    )
+                ).scalar_one()
+                or 0
+            )
+            record_count = int(
+                (
+                    await session.execute(
+                        select(func.count(ExtensionRecord.id)).where(
+                            ExtensionRecord.extension_id == manifest.id,
+                        )
+                    )
+                ).scalar_one()
+                or 0
+            )
+            latest_record_at = (
+                await session.execute(
+                    select(func.max(ExtensionRecord.updated_at)).where(
+                        ExtensionRecord.extension_id == manifest.id,
+                    )
+                )
+            ).scalar_one_or_none()
+
+        payload = manifest.to_dict()
+        payload.update(
+            {
+                "enabled": enabled,
+                "has_runtime": bool(script_path and os.path.exists(script_path)),
+                "runtime_script_path": script_path or None,
+                "config_value_count": config_value_count,
+                "record_count": record_count,
+                "latest_record_at": _iso(latest_record_at),
+            }
+        )
+        return payload
+
+    async def _build_extension_detail(self, manifest) -> dict[str, Any]:
+        stored_settings = await extension_storage_service.list_settings(
+            manifest.id,
+            include_secrets=True,
+        )
+        declared_keys = {field.key for field in manifest.config_fields}
+        config_fields: list[dict[str, Any]] = []
+
+        for field in manifest.config_fields:
+            raw_value = stored_settings.get(field.key)
+            has_value = raw_value is not None and str(raw_value) != ""
+            field_payload = field.to_dict()
+            field_payload.update(
+                {
+                    "value": "" if field.secret or raw_value is None else str(raw_value),
+                    "has_value": has_value,
+                }
+            )
+            config_fields.append(field_payload)
+
+        recent_records = await extension_storage_service.list_records(
+            manifest.id,
+            limit=12,
+            include_expired=True,
+        )
+        trigger_runs = await extension_storage_service.list_trigger_runs(
+            manifest.id,
+            limit=12,
+        )
+        script_path = _extension_script_path(manifest.local_path)
+
+        return {
+            "extension": await self._serialize_extension(manifest),
+            "runtime": {
+                "has_script": bool(script_path and os.path.exists(script_path)),
+                "script_path": script_path or None,
+            },
+            "config": {
+                "scope_type": "global",
+                "fields": config_fields,
+                "unknown_keys": sorted(key for key in stored_settings.keys() if key not in declared_keys),
+            },
+            "records": [
+                {
+                    "id": record.id,
+                    "scope_type": record.scope_type,
+                    "scope_id": record.scope_id,
+                    "record_type": record.record_type,
+                    "record_key": record.record_key,
+                    "title": record.title,
+                    "content_preview": _record_preview(record.content),
+                    "created_at": _iso(record.created_at),
+                    "updated_at": _iso(record.updated_at),
+                    "expires_at": _iso(record.expires_at),
+                }
+                for record in recent_records
+            ],
+            "trigger_runs": [
+                {
+                    "id": run.id,
+                    "trigger_name": run.trigger_name,
+                    "last_run_at": _iso(run.last_run_at),
+                    "last_status": run.last_status,
+                    "last_error": run.last_error,
+                    "updated_at": _iso(run.updated_at),
+                }
+                for run in trigger_runs
+            ],
+        }
+
     async def get_meta(self) -> dict[str, Any]:
         api_base = f"http://{settings.WEB_DASHBOARD_HOST}:{settings.WEB_DASHBOARD_PORT}/api"
         return {
@@ -85,8 +224,118 @@ class EchogramWebService:
             "api_base": api_base,
             "ui_url": settings.WEB_DASHBOARD_UI_URL or None,
             "telegram_retained_commands": ["/edit", "/preview", "/del", "/delete"],
-            "web_focus_areas": ["logs", "prompt preview", "rag records", "subscriptions"],
+            "web_focus_areas": ["logs", "prompt preview", "rag records", "subscriptions", "extensions"],
         }
+
+    async def get_extensions(self) -> dict[str, Any]:
+        catalog = extension_registry.get_catalog()
+        items = []
+        for manifest in extension_registry.list_extensions():
+            items.append(await self._serialize_extension(manifest))
+        catalog["items"] = items
+        return catalog
+
+    async def get_extension_detail(self, extension_id: str) -> dict[str, Any] | None:
+        manifest = extension_registry.get_extension(extension_id)
+        if not manifest:
+            return None
+        return await self._build_extension_detail(manifest)
+
+    async def set_extension_enabled(
+        self,
+        extension_id: str,
+        *,
+        enabled: bool,
+    ) -> dict[str, Any] | None:
+        manifest = extension_registry.get_extension(extension_id)
+        if not manifest:
+            return None
+        await extension_storage_service.set_extension_enabled(manifest.id, enabled)
+        return await self._build_extension_detail(manifest)
+
+    async def update_extension_config(
+        self,
+        extension_id: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        manifest = extension_registry.get_extension(extension_id)
+        if not manifest:
+            return None
+
+        values = payload.get("values", payload)
+        clear_keys = payload.get("clear_keys", [])
+        if not isinstance(values, dict):
+            raise ValueError("config values must be an object")
+        if not isinstance(clear_keys, list):
+            raise ValueError("clear_keys must be a list")
+
+        declared_fields = {field.key: field for field in manifest.config_fields}
+        unknown_value_keys = [key for key in values.keys() if key not in declared_fields]
+        unknown_clear_keys = [key for key in clear_keys if key not in declared_fields]
+        if unknown_value_keys or unknown_clear_keys:
+            unknown_keys = ", ".join(sorted({*unknown_value_keys, *unknown_clear_keys}))
+            raise ValueError(f"unknown extension config field(s): {unknown_keys}")
+
+        for field_key in clear_keys:
+            await extension_storage_service.delete_setting(manifest.id, field_key)
+
+        for field_key, raw_value in values.items():
+            field = declared_fields[field_key]
+            normalized = "" if raw_value is None else str(raw_value)
+
+            if field.secret:
+                if not normalized:
+                    continue
+                await extension_storage_service.set_setting(
+                    manifest.id,
+                    field_key,
+                    normalized,
+                    is_secret=True,
+                )
+                continue
+
+            if not normalized:
+                await extension_storage_service.delete_setting(manifest.id, field_key)
+            else:
+                await extension_storage_service.set_setting(
+                    manifest.id,
+                    field_key,
+                    normalized,
+                    is_secret=field.secret,
+                )
+
+        return await self._build_extension_detail(manifest)
+
+    async def install_extension(
+        self,
+        payload: dict[str, Any] | None = None,
+        *,
+        upload_filename: str | None = None,
+        upload_bytes: bytes | None = None,
+    ) -> dict[str, Any]:
+        try:
+            if upload_bytes is not None:
+                overwrite = False
+                if payload:
+                    overwrite = str(payload.get("overwrite", "")).strip().lower() in {"1", "true", "yes", "on"}
+                result = await extension_installer.install_from_zip_bytes(
+                    upload_filename or "upload.zip",
+                    upload_bytes,
+                    overwrite=overwrite,
+                )
+            else:
+                result = await extension_installer.install(payload or {})
+
+            extension_payload = result.get("extension")
+            extension_id = ""
+            if isinstance(extension_payload, dict):
+                extension_id = str(extension_payload.get("id") or "").strip()
+            manifest = extension_registry.get_extension(extension_id) if extension_id else None
+            if manifest:
+                result["extension"] = await self._serialize_extension(manifest)
+            return result
+        except ExtensionInstallError:
+            raise
 
     async def get_overview(self) -> dict[str, Any]:
         configs = await config_service.get_all_settings()

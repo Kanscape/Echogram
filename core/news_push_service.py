@@ -11,6 +11,7 @@ from core.news_service import NewsService
 from core.access_service import access_service
 from core.history_service import history_service
 from core.llm_utils import simple_chat
+from core.extensions.runtime import extension_runtime_service
 from utils.logger import logger
 from core.sender_service import sender_service # 修复：移动到全局作用域
 
@@ -224,6 +225,17 @@ class NewsPushService:
         main_model = settings_map.get("model_name") or settings.OPENAI_MODEL_NAME
         group_memory = await summary_service.get_summary(chat_id)
         memory_context = f"\n[群组长期记忆/上下文]:\n{group_memory}" if group_memory else "\n[群组长期记忆]: 无相关历史."
+        extension_runtime = await extension_runtime_service.resolve_runtime(
+            chat_id=chat_id,
+            scope="proactive_message",
+            text=f"{source_name}\n{item['title']}\n{item['content'][:500]}",
+            metadata={
+                "source_name": source_name,
+                "title": item["title"],
+            },
+        )
+        if extension_runtime.prompt_injection:
+            memory_context += f"\n[Extension Runtime Context]\n{extension_runtime.prompt_injection}"
         sys_prompt_custom = settings_map.get("system_prompt", "")
         # 注意：此处 build_system_prompt 的参数需要确保正确
         full_sys_prompt = prompt_builder.build_system_prompt(soul_prompt=sys_prompt_custom, dynamic_summary="", has_voice=False) 

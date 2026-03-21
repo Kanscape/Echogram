@@ -537,6 +537,465 @@ class SubscriptionRecord {
   }
 }
 
+class DashboardExtensionTool {
+  const DashboardExtensionTool({
+    required this.name,
+    required this.description,
+    required this.readOnly,
+  });
+
+  final String name;
+  final String description;
+  final bool readOnly;
+
+  factory DashboardExtensionTool.fromJson(Map<String, dynamic> json) {
+    return DashboardExtensionTool(
+      name: readString(json['name']),
+      description: readString(json['description'], fallback: ''),
+      readOnly: readBool(json['read_only'], fallback: true),
+    );
+  }
+}
+
+class DashboardExtensionTriggerMatch {
+  const DashboardExtensionTriggerMatch({
+    required this.urlDomains,
+    required this.keywords,
+    required this.regexPatterns,
+  });
+
+  final List<String> urlDomains;
+  final List<String> keywords;
+  final List<String> regexPatterns;
+
+  factory DashboardExtensionTriggerMatch.fromJson(Map<String, dynamic> json) {
+    return DashboardExtensionTriggerMatch(
+      urlDomains: readStringList(json['url_domains']),
+      keywords: readStringList(json['keywords']),
+      regexPatterns: readStringList(json['regex']),
+    );
+  }
+}
+
+class DashboardExtensionTrigger {
+  const DashboardExtensionTrigger({
+    required this.name,
+    required this.type,
+    required this.description,
+    required this.scopes,
+    required this.schedule,
+    required this.match,
+  });
+
+  final String name;
+  final String type;
+  final String description;
+  final List<String> scopes;
+  final String schedule;
+  final DashboardExtensionTriggerMatch match;
+
+  factory DashboardExtensionTrigger.fromJson(Map<String, dynamic> json) {
+    return DashboardExtensionTrigger(
+      name: readString(json['name']),
+      type: readString(json['type']),
+      description: readString(json['description'], fallback: ''),
+      scopes: readStringList(json['scopes']),
+      schedule: readString(json['schedule'], fallback: ''),
+      match: DashboardExtensionTriggerMatch.fromJson(readMap(json['match'])),
+    );
+  }
+}
+
+class DashboardExtensionConfigField {
+  const DashboardExtensionConfigField({
+    required this.key,
+    required this.label,
+    required this.type,
+    required this.required,
+    required this.secret,
+    required this.help,
+    required this.placeholder,
+  });
+
+  final String key;
+  final String label;
+  final String type;
+  final bool required;
+  final bool secret;
+  final String help;
+  final String placeholder;
+
+  factory DashboardExtensionConfigField.fromJson(Map<String, dynamic> json) {
+    return DashboardExtensionConfigField(
+      key: readString(json['key']),
+      label: readString(json['label']),
+      type: readString(json['type'], fallback: 'text'),
+      required: readBool(json['required']),
+      secret: readBool(json['secret']),
+      help: readString(json['help'], fallback: ''),
+      placeholder: readString(json['placeholder'], fallback: ''),
+    );
+  }
+}
+
+class DashboardExtensionPanel {
+  const DashboardExtensionPanel({
+    required this.slot,
+    required this.kind,
+    required this.title,
+  });
+
+  final String slot;
+  final String kind;
+  final String title;
+
+  factory DashboardExtensionPanel.fromJson(Map<String, dynamic> json) {
+    return DashboardExtensionPanel(
+      slot: readString(json['slot']),
+      kind: readString(json['kind']),
+      title: readString(json['title'], fallback: ''),
+    );
+  }
+}
+
+class DashboardExtension {
+  const DashboardExtension({
+    required this.id,
+    required this.name,
+    required this.version,
+    required this.purpose,
+    required this.description,
+    required this.author,
+    required this.homepage,
+    required this.sourceType,
+    required this.status,
+    required this.installed,
+    required this.enabled,
+    required this.localPath,
+    required this.permissions,
+    required this.tools,
+    required this.triggers,
+    required this.configFields,
+    required this.dashboardPanels,
+    required this.hasRuntime,
+    required this.runtimeScriptPath,
+    required this.configValueCount,
+    required this.recordCount,
+    required this.latestRecordAt,
+  });
+
+  final String id;
+  final String name;
+  final String version;
+  final String purpose;
+  final String description;
+  final String author;
+  final String homepage;
+  final String sourceType;
+  final String status;
+  final bool installed;
+  final bool enabled;
+  final String localPath;
+  final List<String> permissions;
+  final List<DashboardExtensionTool> tools;
+  final List<DashboardExtensionTrigger> triggers;
+  final List<DashboardExtensionConfigField> configFields;
+  final List<DashboardExtensionPanel> dashboardPanels;
+  final bool hasRuntime;
+  final String? runtimeScriptPath;
+  final int configValueCount;
+  final int recordCount;
+  final String? latestRecordAt;
+
+  factory DashboardExtension.fromJson(Map<String, dynamic> json) {
+    return DashboardExtension(
+      id: readString(json['id']),
+      name: readString(json['name']),
+      version: readString(json['version'], fallback: '0.0.0'),
+      purpose: readString(json['purpose'], fallback: ''),
+      description: readString(json['description'], fallback: ''),
+      author: readString(json['author'], fallback: ''),
+      homepage: readString(json['homepage'], fallback: ''),
+      sourceType: readString(json['source_type'], fallback: 'local_dir'),
+      status: readString(json['status'], fallback: 'discovered'),
+      installed: readBool(json['installed'], fallback: false),
+      enabled: readBool(json['enabled'], fallback: false),
+      localPath: readString(json['local_path'], fallback: ''),
+      permissions: readStringList(json['permissions']),
+      tools: readList(
+        json['tools'],
+      ).map((item) => DashboardExtensionTool.fromJson(readMap(item))).toList(),
+      triggers: readList(json['triggers'])
+          .map((item) => DashboardExtensionTrigger.fromJson(readMap(item)))
+          .toList(),
+      configFields: readList(json['config_fields'])
+          .map((item) => DashboardExtensionConfigField.fromJson(readMap(item)))
+          .toList(),
+      dashboardPanels: readList(
+        json['dashboard_panels'],
+      ).map((item) => DashboardExtensionPanel.fromJson(readMap(item))).toList(),
+      hasRuntime: readBool(json['has_runtime']),
+      runtimeScriptPath: readNullableString(json['runtime_script_path']),
+      configValueCount: readInt(json['config_value_count']),
+      recordCount: readInt(json['record_count']),
+      latestRecordAt: readNullableString(json['latest_record_at']),
+    );
+  }
+}
+
+class ExtensionConfigFieldState {
+  const ExtensionConfigFieldState({
+    required this.key,
+    required this.label,
+    required this.type,
+    required this.required,
+    required this.secret,
+    required this.help,
+    required this.placeholder,
+    required this.value,
+    required this.hasValue,
+  });
+
+  final String key;
+  final String label;
+  final String type;
+  final bool required;
+  final bool secret;
+  final String help;
+  final String placeholder;
+  final String value;
+  final bool hasValue;
+
+  factory ExtensionConfigFieldState.fromJson(Map<String, dynamic> json) {
+    return ExtensionConfigFieldState(
+      key: readString(json['key']),
+      label: readString(json['label']),
+      type: readString(json['type'], fallback: 'text'),
+      required: readBool(json['required']),
+      secret: readBool(json['secret']),
+      help: readString(json['help'], fallback: ''),
+      placeholder: readString(json['placeholder'], fallback: ''),
+      value: readString(json['value'], fallback: ''),
+      hasValue: readBool(json['has_value']),
+    );
+  }
+}
+
+class ExtensionConfigState {
+  const ExtensionConfigState({
+    required this.scopeType,
+    required this.fields,
+    required this.unknownKeys,
+  });
+
+  final String scopeType;
+  final List<ExtensionConfigFieldState> fields;
+  final List<String> unknownKeys;
+
+  factory ExtensionConfigState.fromJson(Map<String, dynamic> json) {
+    return ExtensionConfigState(
+      scopeType: readString(json['scope_type'], fallback: 'global'),
+      fields: readList(json['fields'])
+          .map((item) => ExtensionConfigFieldState.fromJson(readMap(item)))
+          .toList(),
+      unknownKeys: readStringList(json['unknown_keys']),
+    );
+  }
+}
+
+class ExtensionRecordPreview {
+  const ExtensionRecordPreview({
+    required this.id,
+    required this.scopeType,
+    required this.scopeId,
+    required this.recordType,
+    required this.recordKey,
+    required this.title,
+    required this.contentPreview,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.expiresAt,
+  });
+
+  final int id;
+  final String scopeType;
+  final int scopeId;
+  final String recordType;
+  final String? recordKey;
+  final String? title;
+  final String contentPreview;
+  final String? createdAt;
+  final String? updatedAt;
+  final String? expiresAt;
+
+  factory ExtensionRecordPreview.fromJson(Map<String, dynamic> json) {
+    return ExtensionRecordPreview(
+      id: readInt(json['id']),
+      scopeType: readString(json['scope_type'], fallback: 'global'),
+      scopeId: readInt(json['scope_id']),
+      recordType: readString(json['record_type']),
+      recordKey: readNullableString(json['record_key']),
+      title: readNullableString(json['title']),
+      contentPreview: readString(json['content_preview'], fallback: ''),
+      createdAt: readNullableString(json['created_at']),
+      updatedAt: readNullableString(json['updated_at']),
+      expiresAt: readNullableString(json['expires_at']),
+    );
+  }
+}
+
+class ExtensionTriggerRunState {
+  const ExtensionTriggerRunState({
+    required this.id,
+    required this.triggerName,
+    required this.lastRunAt,
+    required this.lastStatus,
+    required this.lastError,
+    required this.updatedAt,
+  });
+
+  final int id;
+  final String triggerName;
+  final String? lastRunAt;
+  final String lastStatus;
+  final String? lastError;
+  final String? updatedAt;
+
+  factory ExtensionTriggerRunState.fromJson(Map<String, dynamic> json) {
+    return ExtensionTriggerRunState(
+      id: readInt(json['id']),
+      triggerName: readString(json['trigger_name']),
+      lastRunAt: readNullableString(json['last_run_at']),
+      lastStatus: readString(json['last_status'], fallback: 'unknown'),
+      lastError: readNullableString(json['last_error']),
+      updatedAt: readNullableString(json['updated_at']),
+    );
+  }
+}
+
+class ExtensionRuntimeState {
+  const ExtensionRuntimeState({
+    required this.hasScript,
+    required this.scriptPath,
+  });
+
+  final bool hasScript;
+  final String? scriptPath;
+
+  factory ExtensionRuntimeState.fromJson(Map<String, dynamic> json) {
+    return ExtensionRuntimeState(
+      hasScript: readBool(json['has_script']),
+      scriptPath: readNullableString(json['script_path']),
+    );
+  }
+}
+
+class ExtensionDetail {
+  const ExtensionDetail({
+    required this.extension,
+    required this.runtime,
+    required this.config,
+    required this.records,
+    required this.triggerRuns,
+  });
+
+  final DashboardExtension extension;
+  final ExtensionRuntimeState runtime;
+  final ExtensionConfigState config;
+  final List<ExtensionRecordPreview> records;
+  final List<ExtensionTriggerRunState> triggerRuns;
+
+  factory ExtensionDetail.fromJson(Map<String, dynamic> json) {
+    return ExtensionDetail(
+      extension: DashboardExtension.fromJson(readMap(json['extension'])),
+      runtime: ExtensionRuntimeState.fromJson(readMap(json['runtime'])),
+      config: ExtensionConfigState.fromJson(readMap(json['config'])),
+      records: readList(
+        json['records'],
+      ).map((item) => ExtensionRecordPreview.fromJson(readMap(item))).toList(),
+      triggerRuns: readList(json['trigger_runs'])
+          .map((item) => ExtensionTriggerRunState.fromJson(readMap(item)))
+          .toList(),
+    );
+  }
+}
+
+class ExtensionImportMethod {
+  const ExtensionImportMethod({
+    required this.id,
+    required this.label,
+    required this.description,
+    required this.recommended,
+    required this.enabled,
+  });
+
+  final String id;
+  final String label;
+  final String description;
+  final bool recommended;
+  final bool enabled;
+
+  factory ExtensionImportMethod.fromJson(Map<String, dynamic> json) {
+    return ExtensionImportMethod(
+      id: readString(json['id']),
+      label: readString(json['label']),
+      description: readString(json['description'], fallback: ''),
+      recommended: readBool(json['recommended']),
+      enabled: readBool(json['enabled'], fallback: true),
+    );
+  }
+}
+
+class ExtensionCatalog {
+  const ExtensionCatalog({
+    required this.items,
+    required this.importMethods,
+    required this.recommendedIndexUrl,
+    required this.extensionsDir,
+  });
+
+  final List<DashboardExtension> items;
+  final List<ExtensionImportMethod> importMethods;
+  final String? recommendedIndexUrl;
+  final String extensionsDir;
+
+  factory ExtensionCatalog.fromJson(Map<String, dynamic> json) {
+    return ExtensionCatalog(
+      items: readList(
+        json['items'],
+      ).map((item) => DashboardExtension.fromJson(readMap(item))).toList(),
+      importMethods: readList(
+        json['import_methods'],
+      ).map((item) => ExtensionImportMethod.fromJson(readMap(item))).toList(),
+      recommendedIndexUrl: readNullableString(json['recommended_index_url']),
+      extensionsDir: readString(json['extensions_dir'], fallback: ''),
+    );
+  }
+}
+
+class ExtensionInstallResult {
+  const ExtensionInstallResult({
+    required this.ok,
+    required this.method,
+    required this.message,
+    required this.extension,
+  });
+
+  final bool ok;
+  final String method;
+  final String message;
+  final DashboardExtension extension;
+
+  factory ExtensionInstallResult.fromJson(Map<String, dynamic> json) {
+    return ExtensionInstallResult(
+      ok: readBool(json['ok'], fallback: false),
+      method: readString(json['method'], fallback: ''),
+      message: readString(json['message'], fallback: ''),
+      extension: DashboardExtension.fromJson(readMap(json['extension'])),
+    );
+  }
+}
+
 String _normalizeUrl(String value) {
   if (value.endsWith('/')) {
     return value.substring(0, value.length - 1);

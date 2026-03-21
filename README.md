@@ -9,6 +9,12 @@ Echogram is a Telegram-native bot framework with a local-first web control surfa
 - `apps/echogram_web/`: Jaspr frontend
 - `packages/echogram_core/`: shared Dart models and API client
 
+## Documentation
+
+- [Echogram Web Architecture](docs/echogram_web_architecture.md)
+- [Extensions Development](docs/extensions_development.md)
+- [Extensions Runtime](docs/extensions_runtime.md)
+
 ## Local Development
 
 1. Copy `.env.example` to `.env`.

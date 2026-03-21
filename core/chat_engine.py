@@ -1,6 +1,7 @@
 from telegram import Update, constants
 from telegram.ext import ContextTypes, ApplicationHandlerStop
 from openai import AsyncOpenAI
+import json
 import re
 import asyncio
 import pytz
@@ -21,10 +22,23 @@ from utils.prompts import prompt_builder
 from utils.config_validator import safe_int_config, safe_float_config
 from core.sender_service import sender_service
 from core.rag_service import rag_service
+from core.extensions.runtime import extension_runtime_service
 from collections import defaultdict
 
 # 会话级 RAG 锁，防止并发导致重复嵌入
 CHAT_LOCKS = defaultdict(asyncio.Lock)
+
+
+def _safe_load_tool_arguments(raw_arguments) -> dict:
+    if isinstance(raw_arguments, dict):
+        return raw_arguments
+    if not raw_arguments:
+        return {}
+    try:
+        parsed = json.loads(raw_arguments)
+    except (TypeError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
 
 
 async def process_message_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -215,6 +229,7 @@ async def generate_response(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
         return
 
     dynamic_summary = await summary_service.get_summary(chat_id)
+    extension_runtime = None
 
     # --- RAG Integration & Core Locking ---
     # 按照指示，整个生成过程需要在锁内执行，以保证 Strict Serialization
@@ -317,6 +332,7 @@ async def generate_response(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
 
         # --- RAG Search ---
         # 移到锁内执行，确保使用最新的 embeddings
+        current_query = ""
         try:
             # 聚合当前轮次中所有的用户文本消息作为查询词 (此时已包含多模态转换后的文本)
             user_texts = [
@@ -366,6 +382,28 @@ async def generate_response(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
         # 只要末尾存在语音或图片，就启用对应的多模态协议
         has_v = any(m.message_type == 'voice' for m in tail_msgs)
         has_i = any(m.message_type == 'image' for m in tail_msgs)
+
+        extension_scope = "voice_chat" if has_v else "text_chat"
+        extension_runtime = await extension_runtime_service.resolve_runtime(
+            chat_id=chat_id,
+            scope=extension_scope,
+            text=current_query,
+            metadata={
+                "has_voice": has_v,
+                "has_image": has_i,
+                "tail_message_count": len(tail_msgs),
+            },
+        )
+        if extension_runtime.prompt_injection:
+            dynamic_summary += (
+                f"\n\n[Extension Runtime Context]\n{extension_runtime.prompt_injection}"
+            )
+        if extension_runtime.extension_ids:
+            logger.info(
+                "Extension runtime activated for chat %s: %s",
+                chat_id,
+                ", ".join(extension_runtime.extension_ids),
+            )
     
 
 
@@ -511,24 +549,94 @@ async def generate_response(chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     
     try:
         client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-        # 注意: modalities=["text"] 在 audio preview 模型中通常是必须的
-        response = await client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=current_temp,
-            max_tokens=4000,
-            modalities=["text"] 
-        )
-        
-        # 增强的空内容检查与诊断
-        if not response.choices:
-            logger.error("LLM Error: No choices returned.")
-            await context.bot.send_message(chat_id, "⚠️ AI 未返回任何选项")
-            return
+        request_messages = list(messages)
+        active_tools = extension_runtime.tool_registry.tools if extension_runtime else []
+        reply_content = ""
+        finish_reason = None
 
-        choice = response.choices[0]
-        reply_content = choice.message.content
-        finish_reason = choice.finish_reason
+        for _ in range(4):
+            request_kwargs = {
+                "model": model,
+                "messages": request_messages,
+                "temperature": current_temp,
+                "max_tokens": 4000,
+                "modalities": ["text"],
+            }
+            if active_tools:
+                request_kwargs["tools"] = active_tools
+
+            response = await client.chat.completions.create(**request_kwargs)
+
+            if not response.choices:
+                logger.error("LLM Error: No choices returned.")
+                await context.bot.send_message(chat_id, "⚠️ AI 未返回任何选项")
+                return
+
+            choice = response.choices[0]
+            finish_reason = choice.finish_reason
+            message_obj = choice.message
+            tool_calls = getattr(message_obj, "tool_calls", None) or []
+
+            if tool_calls and extension_runtime:
+                assistant_tool_calls = []
+                for tool_call in tool_calls:
+                    function_data = getattr(tool_call, "function", None)
+                    tool_name = (getattr(function_data, "name", "") or "").strip()
+                    arguments = _safe_load_tool_arguments(
+                        getattr(function_data, "arguments", "")
+                    )
+                    assistant_tool_calls.append(
+                        {
+                            "id": tool_call.id,
+                            "type": "function",
+                            "function": {
+                                "name": tool_name,
+                                "arguments": json.dumps(arguments, ensure_ascii=False),
+                            },
+                        }
+                    )
+
+                request_messages.append(
+                    {
+                        "role": "assistant",
+                        "content": message_obj.content or "",
+                        "tool_calls": assistant_tool_calls,
+                    }
+                )
+
+                for tool_call in tool_calls:
+                    function_data = getattr(tool_call, "function", None)
+                    tool_name = (getattr(function_data, "name", "") or "").strip()
+                    arguments = _safe_load_tool_arguments(
+                        getattr(function_data, "arguments", "")
+                    )
+                    try:
+                        tool_result = await extension_runtime.tool_registry.execute(
+                            tool_name,
+                            arguments,
+                        )
+                    except Exception as tool_error:
+                        logger.error(
+                            "Extension tool execution failed for %s/%s: %s",
+                            chat_id,
+                            tool_name,
+                            tool_error,
+                            exc_info=True,
+                        )
+                        tool_result = f"Tool execution error: {tool_error}"
+
+                    request_messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tool_call.id,
+                            "content": tool_result or "",
+                        }
+                    )
+
+                continue
+
+            reply_content = (message_obj.content or "").strip()
+            break
 
         if not reply_content:
             logger.warning(f"LLM Empty Response. Finish Reason: {finish_reason}")

@@ -26,14 +26,7 @@ class LucideIcon extends StatelessComponent {
   @override
   Component build(BuildContext context) {
     final mergedClasses = ['lucide-icon', if (classes != null && classes!.isNotEmpty) classes!].join(' ');
-    final children = _buildLucideNodes(name);
-
-    if (children == null) {
-      throw StateError(
-        'Lucide icon "$name" is not in the generated registry. '
-        'Run `npm run generate:icons` to sync icons from lucide-static.',
-      );
-    }
+    final children = _buildLucideNodes(name) ?? _fallbackLucideNodes();
 
     return svg(
       children,
@@ -51,5 +44,13 @@ class LucideIcon extends StatelessComponent {
         'focusable': 'false',
       },
     );
+  }
+
+  List<Component> _fallbackLucideNodes() {
+    return [
+      rect(x: '3', y: '3', width: '18', height: '18', rx: '2', []),
+      path(d: 'm9 9 6 6', []),
+      path(d: 'm15 9-6 6', []),
+    ];
   }
 }

@@ -40,6 +40,10 @@ class Settings:
     WEB_DASHBOARD_UI_URL = os.getenv("WEB_DASHBOARD_UI_URL", "")
     WEB_DASHBOARD_TOKEN = os.getenv("WEB_DASHBOARD_TOKEN", "")
     WEB_DASHBOARD_AUTO_OPEN = os.getenv("WEB_DASHBOARD_AUTO_OPEN", "false").strip().lower() in ("1", "true", "yes", "on")
+
+    # Extensions / Plugins
+    EXTENSIONS_DIR = os.getenv("EXTENSIONS_DIR", "extensions")
+    EXTENSION_INDEX_URL = os.getenv("EXTENSION_INDEX_URL", "")
     
     @classmethod
     def validate(cls):

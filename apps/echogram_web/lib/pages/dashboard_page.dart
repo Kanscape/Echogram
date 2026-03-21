@@ -1,7 +1,9 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'dart:html' as html;
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:echogram_core/echogram_core.dart';
 import 'package:jaspr/dom.dart';
@@ -13,6 +15,7 @@ import '../i18n/app_copy.dart';
 enum _DashboardSection {
   overview,
   configuration,
+  extensions,
   logs,
 }
 
@@ -86,6 +89,8 @@ class DashboardPageState extends State<DashboardPage> {
   DashboardOverview? _overview;
   List<ChatSummary> _chats = const [];
   List<SubscriptionRecord> _subscriptions = const [];
+  ExtensionCatalog? _extensionCatalog;
+  Map<String, ExtensionDetail> _extensionDetails = const {};
   ChatDetail? _chatDetail;
   PromptPreview? _promptPreview;
   RecentMessagePage? _messagePage;
@@ -102,12 +107,23 @@ class DashboardPageState extends State<DashboardPage> {
   bool _loadingRag = false;
   bool _loadingLogs = true;
   bool _loadingSettings = true;
+  bool _loadingExtensions = true;
   String? _error;
   String? _logsError;
   String? _settingsError;
+  String? _extensionsError;
   String? _notice;
   String? _savingGroupId;
   String _chatQuery = '';
+  String _extensionRepoUrl = '';
+  bool _installingExtension = false;
+  bool _installingExtensionZip = false;
+  html.File? _extensionZipFile;
+  String? _extensionZipName;
+  Set<String> _loadingExtensionIds = const {};
+  Set<String> _busyExtensionIds = const {};
+  Map<String, Map<String, String>> _extensionDrafts = const {};
+  Map<String, Set<String>> _extensionClearSecrets = const {};
 
   _DashboardSection _activeSection = _DashboardSection.overview;
   _LogPane _activeLogPane = _LogPane.conversations;
@@ -127,6 +143,7 @@ class DashboardPageState extends State<DashboardPage> {
     _restoreUiPreferences();
     _loadDashboard();
     _loadSettings();
+    _loadExtensions();
     _loadLogs();
   }
 
@@ -308,6 +325,302 @@ class DashboardPageState extends State<DashboardPage> {
     }
   }
 
+  Future<void> _loadExtensions() async {
+    setState(() {
+      _loadingExtensions = true;
+      _extensionsError = null;
+    });
+
+    try {
+      final catalog = await _client.getExtensions();
+      setState(() {
+        _extensionCatalog = catalog;
+        _loadingExtensions = false;
+      });
+      unawaited(_primeExtensionDetails(catalog.items));
+    } catch (error) {
+      setState(() {
+        _extensionsError = _friendlyError(error);
+        _loadingExtensions = false;
+      });
+    }
+  }
+
+  Future<void> _primeExtensionDetails(List<DashboardExtension> extensions) async {
+    for (final extension in extensions) {
+      await _loadExtensionDetail(extension.id, quiet: true);
+    }
+  }
+
+  void _applyExtensionDetail(ExtensionDetail detail) {
+    final nextDetails = Map<String, ExtensionDetail>.from(_extensionDetails)..[detail.extension.id] = detail;
+    final nextDrafts = Map<String, Map<String, String>>.from(_extensionDrafts);
+    nextDrafts[detail.extension.id] = {
+      for (final field in detail.config.fields) field.key: field.secret ? '' : field.value,
+    };
+    final nextClearSecrets = Map<String, Set<String>>.from(_extensionClearSecrets);
+    nextClearSecrets[detail.extension.id] = <String>{};
+    setState(() {
+      _extensionDetails = nextDetails;
+      _extensionDrafts = nextDrafts;
+      _extensionClearSecrets = nextClearSecrets;
+    });
+  }
+
+  Future<void> _loadExtensionDetail(String extensionId, {bool quiet = false}) async {
+    if (_loadingExtensionIds.contains(extensionId)) {
+      return;
+    }
+
+    setState(() {
+      _loadingExtensionIds = {..._loadingExtensionIds, extensionId};
+      if (!quiet) {
+        _extensionsError = null;
+      }
+    });
+
+    try {
+      final detail = await _client.getExtensionDetail(extensionId);
+      _applyExtensionDetail(detail);
+    } catch (error) {
+      if (!quiet) {
+        setState(() {
+          _extensionsError = _friendlyError(error);
+        });
+      }
+    } finally {
+      setState(() {
+        _loadingExtensionIds = {..._loadingExtensionIds}..remove(extensionId);
+      });
+    }
+  }
+
+  void _updateExtensionDraft(String extensionId, String key, String value) {
+    final nextDraft = Map<String, Map<String, String>>.from(_extensionDrafts);
+    final draft = Map<String, String>.from(nextDraft[extensionId] ?? const {});
+    draft[key] = value;
+    nextDraft[extensionId] = draft;
+
+    final nextClear = Map<String, Set<String>>.from(_extensionClearSecrets);
+    final clears = {...(nextClear[extensionId] ?? const <String>{})}..remove(key);
+    nextClear[extensionId] = clears;
+
+    setState(() {
+      _extensionDrafts = nextDraft;
+      _extensionClearSecrets = nextClear;
+    });
+  }
+
+  void _clearExtensionSecret(String extensionId, String key) {
+    final nextDraft = Map<String, Map<String, String>>.from(_extensionDrafts);
+    final draft = Map<String, String>.from(nextDraft[extensionId] ?? const {});
+    draft[key] = '';
+    nextDraft[extensionId] = draft;
+
+    final nextClear = Map<String, Set<String>>.from(_extensionClearSecrets);
+    final clears = {...(nextClear[extensionId] ?? const <String>{})}..add(key);
+    nextClear[extensionId] = clears;
+
+    setState(() {
+      _extensionDrafts = nextDraft;
+      _extensionClearSecrets = nextClear;
+    });
+  }
+
+  Future<void> _setExtensionEnabled(
+    DashboardExtension extension,
+    bool enabled,
+  ) async {
+    setState(() {
+      _busyExtensionIds = {..._busyExtensionIds, extension.id};
+      _extensionsError = null;
+      _notice = null;
+    });
+
+    try {
+      final detail = await _client.setExtensionEnabled(
+        extension.id,
+        enabled: enabled,
+      );
+      _applyExtensionDetail(detail);
+      await _loadExtensions();
+      setState(() {
+        _notice = enabled ? _tr('Extension 已启用。', 'Extension enabled.') : _tr('Extension 已停用。', 'Extension disabled.');
+      });
+    } catch (error) {
+      setState(() {
+        _extensionsError = _friendlyError(error);
+      });
+    } finally {
+      setState(() {
+        _busyExtensionIds = {..._busyExtensionIds}..remove(extension.id);
+      });
+    }
+  }
+
+  Future<void> _saveExtensionConfig(String extensionId) async {
+    final detail = _extensionDetails[extensionId];
+    if (detail == null) {
+      await _loadExtensionDetail(extensionId);
+      return;
+    }
+
+    final draft = _extensionDrafts[extensionId] ?? const {};
+    final clearKeys = (_extensionClearSecrets[extensionId] ?? const <String>{}).toList();
+    final values = <String, dynamic>{};
+
+    for (final field in detail.config.fields) {
+      final draftValue = draft[field.key] ?? '';
+      if (field.secret) {
+        if (draftValue.isNotEmpty) {
+          values[field.key] = draftValue;
+        }
+        continue;
+      }
+      if (draftValue != field.value) {
+        values[field.key] = draftValue;
+      }
+    }
+
+    if (values.isEmpty && clearKeys.isEmpty) {
+      setState(() {
+        _notice = _tr('当前 Extension 没有未保存配置。', 'No unsaved extension settings.');
+      });
+      return;
+    }
+
+    setState(() {
+      _busyExtensionIds = {..._busyExtensionIds, extensionId};
+      _extensionsError = null;
+      _notice = null;
+    });
+
+    try {
+      final detail = await _client.patchExtensionConfig(
+        extensionId,
+        values: values,
+        clearKeys: clearKeys,
+      );
+      _applyExtensionDetail(detail);
+      await _loadExtensions();
+      setState(() {
+        _notice = _tr('Extension 配置已保存。', 'Extension configuration saved.');
+      });
+    } catch (error) {
+      setState(() {
+        _extensionsError = _friendlyError(error);
+      });
+    } finally {
+      setState(() {
+        _busyExtensionIds = {..._busyExtensionIds}..remove(extensionId);
+      });
+    }
+  }
+
+  Future<void> _pickExtensionZip() async {
+    final input = html.FileUploadInputElement()..accept = '.zip,application/zip';
+    final completer = Completer<html.File?>();
+    input.onChange.first.then((_) {
+      final files = input.files;
+      completer.complete(files != null && files.isNotEmpty ? files.first : null);
+    });
+    input.click();
+    final file = await completer.future;
+    if (file == null) {
+      return;
+    }
+    setState(() {
+      _extensionZipFile = file;
+      _extensionZipName = file.name;
+    });
+  }
+
+  Future<List<int>> _readHtmlFileBytes(html.File file) async {
+    final reader = html.FileReader();
+    final completer = Completer<List<int>>();
+    reader.onLoadEnd.first.then((_) {
+      final result = reader.result;
+      if (result is Uint8List) {
+        completer.complete(result);
+      } else if (result is ByteBuffer) {
+        completer.complete(result.asUint8List());
+      } else if (result is List<int>) {
+        completer.complete(result);
+      } else {
+        completer.complete(const <int>[]);
+      }
+    });
+    reader.readAsArrayBuffer(file);
+    return completer.future;
+  }
+
+  Future<void> _installExtensionFromZip() async {
+    final file = _extensionZipFile;
+    if (file == null) {
+      setState(() {
+        _extensionsError = _tr('请先选择一个 ZIP extension 包。', 'Please choose a ZIP extension package first.');
+      });
+      return;
+    }
+
+    setState(() {
+      _installingExtensionZip = true;
+      _extensionsError = null;
+      _notice = null;
+    });
+
+    try {
+      final bytes = await _readHtmlFileBytes(file);
+      final result = await _client.installExtensionZip(bytes, file.name);
+      await _loadExtensions();
+      setState(() {
+        _installingExtensionZip = false;
+        _extensionZipFile = null;
+        _extensionZipName = null;
+        _notice = result.message;
+      });
+    } catch (error) {
+      setState(() {
+        _installingExtensionZip = false;
+        _extensionsError = _friendlyError(error);
+      });
+    }
+  }
+
+  Future<void> _installExtensionFromRepoUrl() async {
+    final url = _extensionRepoUrl.trim();
+    if (url.isEmpty) {
+      setState(() {
+        _extensionsError = _tr('请先填写仓库 URL。', 'Please enter a repository URL first.');
+      });
+      return;
+    }
+
+    setState(() {
+      _installingExtension = true;
+      _extensionsError = null;
+      _notice = null;
+    });
+
+    try {
+      final result = await _client.installExtension({
+        'method': 'git_url',
+        'url': url,
+      });
+      await _loadExtensions();
+      setState(() {
+        _installingExtension = false;
+        _extensionRepoUrl = '';
+        _notice = result.message;
+      });
+    } catch (error) {
+      setState(() {
+        _installingExtension = false;
+        _extensionsError = _friendlyError(error);
+      });
+    }
+  }
+
   Future<void> _rebuildRag() async {
     final chatId = _selectedChatId;
     if (chatId == null) {
@@ -335,6 +648,9 @@ class DashboardPageState extends State<DashboardPage> {
     await _loadDashboard();
     if (_activeSection == _DashboardSection.configuration) {
       await _loadSettings();
+    }
+    if (_activeSection == _DashboardSection.extensions) {
+      await _loadExtensions();
     }
     if (_activeSection == _DashboardSection.logs && _activeLogPane == _LogPane.system) {
       await _loadLogs();
@@ -769,6 +1085,12 @@ class DashboardPageState extends State<DashboardPage> {
           onClick: () => _changeSection(_DashboardSection.configuration),
         ),
         _sideNavItem(
+          icon: const LucideIcon('package', classes: 'jaspr-rail-button__icon'),
+          label: _tr('扩展', 'Extensions'),
+          active: _activeSection == _DashboardSection.extensions,
+          onClick: () => _changeSection(_DashboardSection.extensions),
+        ),
+        _sideNavItem(
           icon: const LucideIcon('logs', classes: 'jaspr-rail-button__icon'),
           label: _tr('日志', 'Logs'),
           active: _activeSection == _DashboardSection.logs,
@@ -849,12 +1171,21 @@ class DashboardPageState extends State<DashboardPage> {
     ]);
   }
 
+  String _sectionTitle(_DashboardSection section) {
+    switch (section) {
+      case _DashboardSection.overview:
+        return _tr('概览', 'Overview');
+      case _DashboardSection.configuration:
+        return _tr('配置', 'Configuration');
+      case _DashboardSection.extensions:
+        return 'Extensions';
+      case _DashboardSection.logs:
+        return _tr('日志', 'Logs');
+    }
+  }
+
   Component _buildTopbar() {
-    final sectionLabel = switch (_activeSection) {
-      _DashboardSection.overview => _tr('概览', 'Overview'),
-      _DashboardSection.configuration => _tr('配置', 'Configuration'),
-      _DashboardSection.logs => _tr('日志', 'Logs'),
-    };
+    final sectionLabel = _sectionTitle(_activeSection);
     final crumb = _selectedChatSummary != null ? '$sectionLabel / ${_selectedChatSummary!.label}' : sectionLabel;
     final centerLabel = _overview?.meta.botName ?? 'Jaspr Panel';
 
@@ -880,6 +1211,8 @@ class DashboardPageState extends State<DashboardPage> {
         return _buildOverviewSection();
       case _DashboardSection.configuration:
         return _buildConfigurationSection();
+      case _DashboardSection.extensions:
+        return _buildExtensionsSection();
       case _DashboardSection.logs:
         return _buildLogsSection();
     }
@@ -1218,6 +1551,166 @@ class DashboardPageState extends State<DashboardPage> {
       ]),
       p(classes: 'studio-field__help', [.text(field.help)]),
       control,
+    ]);
+  }
+
+  Component _buildExtensionsSection() {
+    final catalog = _extensionCatalog;
+
+    return div(classes: 'dashboard-grid', [
+      div(classes: 'dashboard-column', [
+        _surface(
+          eyebrow: _tr('Extensions 中心', 'Extensions Hub'),
+          title: _tr('Extensions 与工具目录', 'Extensions and Tool Catalog'),
+          copy: _tr(
+            'Extensions 必须先声明用途、权限、工具和配置，再进入启用流程。',
+            'Extensions must declare purpose, permissions, tools, and configuration before entering the enable flow.',
+          ),
+          children: [
+            div(classes: 'studio-chip-row', [
+              _chip(_tr('已发现', 'Discovered'), '${catalog?.items.length ?? 0}'),
+              _chip(_tr('导入方式', 'Import methods'), '${catalog?.importMethods.length ?? 0}'),
+              _chip(_tr('接口', 'API'), 'GET /api/extensions'),
+            ]),
+          ],
+        ),
+        if (_loadingExtensions && catalog == null)
+          _loadingSurface(
+            _tr('正在加载 Extensions 目录', 'Loading extension catalog'),
+            _tr(
+              '后端正在扫描扩展目录并组装声明信息。',
+              'The backend is scanning the extensions directory and assembling manifest metadata.',
+            ),
+          )
+        else if (_extensionsError != null && catalog == null)
+          _emptySurface(
+            _tr('Extensions 目录暂不可用', 'Extension catalog unavailable'),
+            _extensionsError!,
+          )
+        else if (catalog == null || catalog.items.isEmpty)
+          _surface(
+            eyebrow: _tr('当前状态', 'Current state'),
+            title: _tr('尚未发现已安装 Extensions', 'No installed extensions discovered yet'),
+            copy: _tr(
+              '你可以先准备本地 extensions 目录，随后再接入仓库 URL 或 ZIP 导入流程。',
+              'You can prepare local extension folders first, then wire repository URL or ZIP import flows next.',
+            ),
+            children: [
+              _copyBlock(
+                _tr(
+                  '本地扩展目录: ${catalog?.extensionsDir ?? ''}',
+                  'Local extensions directory: ${catalog?.extensionsDir ?? ''}',
+                ),
+              ),
+            ],
+          )
+        else
+          div(classes: 'dashboard-column', [
+            for (final extension in catalog.items) _extensionCardV3(extension),
+          ]),
+      ]),
+      div(classes: 'dashboard-rail', [
+        _surface(
+          eyebrow: _tr('导入策略', 'Import Strategy'),
+          title: _tr('推荐来源与入口', 'Recommended Sources and Entry Points'),
+          copy: _tr(
+            'V1 推荐以独立 Index 仓库作为主要发现入口，仓库 URL 和 ZIP 作为高级入口。',
+            'For V1, prefer a dedicated index repository as the primary discovery path, with repository URL and ZIP as advanced paths.',
+          ),
+          children: [
+            if (_extensionsError != null) _banner(_extensionsError!, error: true),
+            _codeBlock(
+              _tr('当前支持', 'Currently supported'),
+              _tr(
+                '已接通: Repository URL / Local ZIP\n规划中: Curated index',
+                'Live now: Repository URL / Local ZIP\nPlanned: Curated index',
+              ),
+            ),
+            div(classes: 'studio-actions', [
+              input(
+                type: InputType.text,
+                value: _extensionRepoUrl,
+                classes: 'studio-input',
+                attributes: {
+                  'placeholder': _tr(
+                    'https://github.com/your-org/your-extension',
+                    'https://github.com/your-org/your-extension',
+                  ),
+                },
+                onInput: (String next) {
+                  setState(() {
+                    _extensionRepoUrl = next;
+                  });
+                },
+              ),
+              button(
+                classes: 'studio-btn studio-btn--primary',
+                onClick: _installingExtension ? null : _installExtensionFromRepoUrl,
+                [
+                  .text(_installingExtension ? _tr('导入中...', 'Installing...') : _tr('从仓库导入', 'Install from repo')),
+                ],
+              ),
+            ]),
+            div(classes: 'studio-actions', [
+              button(
+                classes: 'studio-btn studio-btn--ghost',
+                onClick: _installingExtensionZip ? null : _pickExtensionZip,
+                [
+                  .text(
+                    _extensionZipName == null
+                        ? _tr('选择 ZIP 包', 'Choose ZIP')
+                        : _tr('已选择: $_extensionZipName', 'Selected: $_extensionZipName'),
+                  ),
+                ],
+              ),
+              button(
+                classes: 'studio-btn studio-btn--primary',
+                onClick: _installingExtensionZip ? null : _installExtensionFromZip,
+                [
+                  .text(
+                    _installingExtensionZip ? _tr('上传中...', 'Uploading...') : _tr('从 ZIP 导入', 'Install from ZIP'),
+                  ),
+                ],
+              ),
+            ]),
+            if (catalog != null)
+              div(classes: 'studio-kv-list', [
+                _kvRow(
+                  _tr('本地目录', 'Local directory'),
+                  catalog.extensionsDir.isEmpty ? _tr('未配置', 'Not configured') : catalog.extensionsDir,
+                ),
+                _kvRow(
+                  _tr('推荐 Index', 'Recommended index'),
+                  catalog.recommendedIndexUrl ?? _tr('未配置', 'Not configured'),
+                ),
+              ]),
+            if (catalog != null)
+              for (final method in catalog.importMethods)
+                _tipCard(
+                  '${method.recommended ? '[Recommended] ' : ''}${method.label}',
+                  method.enabled
+                      ? method.description
+                      : '${method.description} ${_tr('当前未开启或未配置。', 'Currently disabled or not configured.')}',
+                ),
+          ],
+        ),
+        _surface(
+          eyebrow: _tr('设计约束', 'Design Constraint'),
+          title: _tr('声明式页面贡献', 'Declarative Page Contributions'),
+          copy: _tr(
+            'Extensions 不应直接注入任意 Dart 组件，只能声明 panel、slot、field 等数据化贡献。',
+            'Extensions should not inject arbitrary Dart components. They should declare panels, slots, and field schemas only.',
+          ),
+          children: [
+            _copyBlock(
+              _tr(
+                '推荐顺序:\n1. Curated index\n2. Repository URL\n3. Local ZIP\n\nDashboard 只渲染声明，不执行 extension 前端代码。',
+                'Recommended order:\n1. Curated index\n2. Repository URL\n3. Local ZIP\n\nThe dashboard renders declarations only and does not execute extension frontend code.',
+              ),
+            ),
+          ],
+        ),
+      ]),
     ]);
   }
 
@@ -1880,6 +2373,413 @@ class DashboardPageState extends State<DashboardPage> {
         span(classes: 'record-card__time', [.text(_timeLabel(message.timestamp))]),
       ]),
       _copyBlock(message.content.isEmpty ? _tr('(空内容)', '(empty)') : message.content),
+    ]);
+  }
+
+  // ignore: unused_element
+  Component _extensionCard(DashboardExtension extension) {
+    final toolsText = extension.tools.isEmpty
+        ? _tr('暂未声明工具', 'No tools declared yet.')
+        : extension.tools
+              .map(
+                (tool) =>
+                    '- ${tool.name}${tool.readOnly ? ' (${_tr('只读', 'read-only')})' : ''}${tool.description.isEmpty ? '' : ': ${tool.description}'}',
+              )
+              .join('\n');
+    final permissionsText = extension.permissions.isEmpty
+        ? _tr('无额外权限声明', 'No extra permissions declared.')
+        : extension.permissions.join('\n');
+
+    return div(classes: 'subscription-card', [
+      div(classes: 'record-card__head', [
+        span(classes: 'studio-status ${extension.enabled ? 'status-ok' : 'status-muted'}', [
+          .text(extension.enabled ? _tr('已启用', 'Enabled') : _tr('未启用', 'Not enabled')),
+        ]),
+        span(classes: 'studio-status status-muted', [
+          .text('${extension.sourceType} / ${extension.status}'),
+        ]),
+        span(classes: 'record-card__time', [.text(extension.version)]),
+      ]),
+      h3(classes: 'studio-title', [.text(extension.name)]),
+      if (extension.purpose.isNotEmpty) p(classes: 'studio-copy', [.text(extension.purpose)]),
+      if (extension.description.isNotEmpty) p(classes: 'studio-copy', [.text(extension.description)]),
+      div(classes: 'studio-chip-row', [
+        _chip(_tr('工具', 'Tools'), '${extension.tools.length}'),
+        _chip(_tr('权限', 'Permissions'), '${extension.permissions.length}'),
+        _chip(_tr('面板', 'Panels'), '${extension.dashboardPanels.length}'),
+        _chip(_tr('配置字段', 'Config fields'), '${extension.configFields.length}'),
+      ]),
+      _surface(
+        eyebrow: _tr('声明信息', 'Declaration'),
+        title: _tr('工具与权限', 'Tools and Permissions'),
+        copy: '',
+        children: [
+          _codeBlock(_tr('工具', 'Tools'), toolsText),
+          _codeBlock(_tr('权限', 'Permissions'), permissionsText),
+          if (extension.localPath.isNotEmpty) _codeBlock(_tr('本地路径', 'Local path'), extension.localPath),
+        ],
+      ),
+    ]);
+  }
+
+  // ignore: unused_element
+  Component _extensionCardV2(DashboardExtension extension) {
+    final toolsText = extension.tools.isEmpty
+        ? _tr('暂未声明工具', 'No tools declared yet.')
+        : extension.tools
+              .map(
+                (tool) =>
+                    '- ${tool.name}${tool.readOnly ? ' (${_tr('只读', 'read-only')})' : ''}${tool.description.isEmpty ? '' : ': ${tool.description}'}',
+              )
+              .join('\n');
+    final permissionsText = extension.permissions.isEmpty
+        ? _tr('无额外权限声明', 'No extra permissions declared.')
+        : extension.permissions.join('\n');
+    final triggersText = extension.triggers.isEmpty
+        ? _tr('暂未声明触发器', 'No triggers declared yet.')
+        : extension.triggers
+              .map((trigger) {
+                final parts = <String>[
+                  trigger.type,
+                  if (trigger.scopes.isNotEmpty) 'scopes=${trigger.scopes.join(",")}',
+                  if (trigger.match.urlDomains.isNotEmpty) 'domains=${trigger.match.urlDomains.join(",")}',
+                  if (trigger.match.keywords.isNotEmpty) 'keywords=${trigger.match.keywords.join(",")}',
+                  if (trigger.match.regexPatterns.isNotEmpty) 'regex=${trigger.match.regexPatterns.join(",")}',
+                  if (trigger.schedule.isNotEmpty) 'schedule=${trigger.schedule}',
+                ];
+                final header = '- ${trigger.name.isEmpty ? trigger.type : trigger.name}';
+                final detail = parts.isEmpty ? '' : ' [${parts.join(" | ")}]';
+                final desc = trigger.description.isEmpty ? '' : ': ${trigger.description}';
+                return '$header$detail$desc';
+              })
+              .join('\n');
+
+    return div(classes: 'subscription-card', [
+      div(classes: 'record-card__head', [
+        span(
+          classes: 'studio-status ${extension.enabled ? 'status-ok' : 'status-muted'}',
+          [
+            .text(
+              extension.enabled ? _tr('已启用', 'Enabled') : _tr('未启用', 'Not enabled'),
+            ),
+          ],
+        ),
+        span(classes: 'studio-status status-muted', [
+          .text('${extension.sourceType} / ${extension.status}'),
+        ]),
+        span(classes: 'record-card__time', [.text(extension.version)]),
+      ]),
+      h3(classes: 'studio-title', [.text(extension.name)]),
+      if (extension.purpose.isNotEmpty) p(classes: 'studio-copy', [.text(extension.purpose)]),
+      if (extension.description.isNotEmpty) p(classes: 'studio-copy', [.text(extension.description)]),
+      div(classes: 'studio-chip-row', [
+        _chip(_tr('工具', 'Tools'), '${extension.tools.length}'),
+        _chip(_tr('触发器', 'Triggers'), '${extension.triggers.length}'),
+        _chip(_tr('权限', 'Permissions'), '${extension.permissions.length}'),
+        _chip(_tr('面板', 'Panels'), '${extension.dashboardPanels.length}'),
+        _chip(
+          _tr('配置字段', 'Config fields'),
+          '${extension.configFields.length}',
+        ),
+      ]),
+      _surface(
+        eyebrow: _tr('声明信息', 'Declaration'),
+        title: _tr('工具、触发器与权限', 'Tools, Triggers and Permissions'),
+        copy: '',
+        children: [
+          _codeBlock(_tr('工具', 'Tools'), toolsText),
+          _codeBlock(_tr('触发器', 'Triggers'), triggersText),
+          _codeBlock(_tr('权限', 'Permissions'), permissionsText),
+          if (extension.localPath.isNotEmpty) _codeBlock(_tr('本地路径', 'Local path'), extension.localPath),
+        ],
+      ),
+    ]);
+  }
+
+  bool _extensionFieldDirty(
+    String extensionId,
+    ExtensionDetail detail,
+    ExtensionConfigFieldState field,
+  ) {
+    final draft = _extensionDrafts[extensionId] ?? const {};
+    final clearKeys = _extensionClearSecrets[extensionId] ?? const <String>{};
+    final draftValue = draft[field.key] ?? '';
+    if (field.secret) {
+      return draftValue.isNotEmpty || clearKeys.contains(field.key);
+    }
+    return draftValue != field.value;
+  }
+
+  int _extensionDirtyCount(ExtensionDetail detail) {
+    return detail.config.fields.where((field) => _extensionFieldDirty(detail.extension.id, detail, field)).length;
+  }
+
+  Component _buildExtensionConfigField(
+    ExtensionDetail detail,
+    ExtensionConfigFieldState field,
+  ) {
+    final extensionId = detail.extension.id;
+    final draft = _extensionDrafts[extensionId] ?? const {};
+    final clearKeys = _extensionClearSecrets[extensionId] ?? const <String>{};
+    final dirty = _extensionFieldDirty(extensionId, detail, field);
+    final currentValue = field.secret ? (draft[field.key] ?? '') : (draft[field.key] ?? field.value);
+
+    Component control;
+    if (field.type == 'multiline') {
+      control = textarea(
+        [.text(currentValue)],
+        rows: 5,
+        classes: 'studio-textarea',
+        placeholder: field.placeholder.isEmpty ? null : field.placeholder,
+        onInput: (next) => _updateExtensionDraft(extensionId, field.key, next.toString()),
+      );
+    } else if (field.type == 'toggle') {
+      final truthy = _isTruthy(currentValue);
+      control = div(classes: 'studio-actions', [
+        button(
+          classes: 'studio-btn ${truthy ? 'studio-btn--primary' : 'studio-btn--ghost'}',
+          onClick: () => _updateExtensionDraft(extensionId, field.key, 'true'),
+          [.text(_tr('开启', 'On'))],
+        ),
+        button(
+          classes: 'studio-btn ${truthy ? 'studio-btn--ghost' : 'studio-btn--primary'}',
+          onClick: () => _updateExtensionDraft(extensionId, field.key, 'false'),
+          [.text(_tr('关闭', 'Off'))],
+        ),
+      ]);
+    } else {
+      control = input(
+        type: field.secret ? InputType.password : InputType.text,
+        value: currentValue,
+        classes: 'studio-input',
+        attributes: field.placeholder.isEmpty ? null : {'placeholder': field.placeholder},
+        onInput: (next) => _updateExtensionDraft(extensionId, field.key, next.toString()),
+      );
+    }
+
+    return div(classes: 'studio-field${field.type == 'multiline' ? ' is-wide' : ''}', [
+      div(classes: 'studio-field__head', [
+        div(classes: 'studio-field__label', [.text(field.label)]),
+        if (dirty) span(classes: 'studio-field__badge', [.text(_tr('未保存', 'Unsaved'))]),
+        if (field.required) span(classes: 'studio-status status-warn', [.text(_tr('必填', 'Required'))]),
+      ]),
+      p(
+        classes: 'studio-field__help',
+        [
+          .text(
+            field.help.isNotEmpty
+                ? field.help
+                : (field.secret
+                      ? _tr('机密字段不会回显，留空表示保持不变。', 'Secret fields stay hidden; leave empty to keep unchanged.')
+                      : _tr('Extension 声明的配置项。', 'Declared extension setting.')),
+          ),
+        ],
+      ),
+      if (field.secret && field.hasValue && !clearKeys.contains(field.key))
+        div(classes: 'studio-chip-row', [
+          _chip(_tr('状态', 'State'), _tr('已保存机密', 'Secret stored')),
+          button(
+            classes: 'studio-btn studio-btn--ghost',
+            onClick: () => _clearExtensionSecret(extensionId, field.key),
+            [.text(_tr('清除', 'Clear'))],
+          ),
+        ]),
+      if (field.secret && clearKeys.contains(field.key))
+        _banner(_tr('该机密将在下次保存时被清除。', 'This secret will be removed on next save.'), error: false),
+      control,
+    ]);
+  }
+
+  Component _extensionCardV3(DashboardExtension extension) {
+    final detail = _extensionDetails[extension.id];
+    final loading = _loadingExtensionIds.contains(extension.id);
+    final busy = _busyExtensionIds.contains(extension.id);
+    final toolsText = extension.tools.isEmpty
+        ? _tr('暂无工具声明。', 'No tools declared yet.')
+        : extension.tools
+              .map(
+                (tool) =>
+                    '- ${tool.name}${tool.readOnly ? ' (${_tr('只读', 'read-only')})' : ''}${tool.description.isEmpty ? '' : ': ${tool.description}'}',
+              )
+              .join('\n');
+    final permissionsText = extension.permissions.isEmpty
+        ? _tr('未声明额外权限。', 'No extra permissions declared.')
+        : extension.permissions.join('\n');
+    final triggersText = extension.triggers.isEmpty
+        ? _tr('暂无触发器声明。', 'No triggers declared yet.')
+        : extension.triggers
+              .map((trigger) {
+                final parts = <String>[
+                  trigger.type,
+                  if (trigger.scopes.isNotEmpty) 'scopes=${trigger.scopes.join(",")}',
+                  if (trigger.match.urlDomains.isNotEmpty) 'domains=${trigger.match.urlDomains.join(",")}',
+                  if (trigger.match.keywords.isNotEmpty) 'keywords=${trigger.match.keywords.join(",")}',
+                  if (trigger.match.regexPatterns.isNotEmpty) 'regex=${trigger.match.regexPatterns.join(",")}',
+                  if (trigger.schedule.isNotEmpty) 'schedule=${trigger.schedule}',
+                ];
+                final body = parts.isEmpty ? '' : ' [${parts.join(" | ")}]';
+                return '- ${trigger.name}$body${trigger.description.isEmpty ? '' : ': ${trigger.description}'}';
+              })
+              .join('\n');
+
+    return div(classes: 'subscription-card', [
+      div(classes: 'record-card__head', [
+        span(
+          classes: 'studio-status ${extension.enabled ? 'status-ok' : 'status-muted'}',
+          [.text(extension.enabled ? _tr('已启用', 'Enabled') : _tr('未启用', 'Disabled'))],
+        ),
+        span(
+          classes: 'studio-status ${extension.hasRuntime ? 'status-ok' : 'status-warn'}',
+          [.text(extension.hasRuntime ? _tr('运行时已就绪', 'Runtime ready') : _tr('缺少 extension.py', 'Missing runtime'))],
+        ),
+        span(classes: 'record-card__time', [.text(extension.version)]),
+      ]),
+      h3(classes: 'studio-title', [.text(extension.name)]),
+      if (extension.purpose.isNotEmpty) p(classes: 'studio-copy', [.text(extension.purpose)]),
+      if (extension.description.isNotEmpty) p(classes: 'studio-copy', [.text(extension.description)]),
+      div(classes: 'studio-chip-row', [
+        _chip(_tr('工具', 'Tools'), '${extension.tools.length}'),
+        _chip(_tr('触发器', 'Triggers'), '${extension.triggers.length}'),
+        _chip(_tr('配置值', 'Config values'), '${extension.configValueCount}'),
+        _chip(_tr('记录', 'Records'), '${extension.recordCount}'),
+        _chip(
+          _tr('最近活动', 'Latest activity'),
+          extension.latestRecordAt == null ? _tr('无', 'None') : _timeLabel(extension.latestRecordAt),
+        ),
+      ]),
+      div(classes: 'studio-actions', [
+        button(
+          classes: 'studio-btn ${extension.enabled ? 'studio-btn--ghost' : 'studio-btn--primary'}',
+          onClick: busy ? null : () => _setExtensionEnabled(extension, !extension.enabled),
+          [
+            .text(
+              busy
+                  ? _tr('处理中...', 'Working...')
+                  : extension.enabled
+                  ? _tr('停用 Extension', 'Disable')
+                  : _tr('启用 Extension', 'Enable'),
+            ),
+          ],
+        ),
+        button(
+          classes: 'studio-btn studio-btn--ghost',
+          onClick: loading ? null : () => _loadExtensionDetail(extension.id),
+          [.text(loading ? _tr('加载中...', 'Loading...') : _tr('刷新详情', 'Refresh detail'))],
+        ),
+        if (detail != null)
+          button(
+            classes: 'studio-btn studio-btn--primary',
+            onClick: busy ? null : () => _saveExtensionConfig(extension.id),
+            [
+              .text(
+                busy
+                    ? _tr('保存中...', 'Saving...')
+                    : _tr('保存配置 (${_extensionDirtyCount(detail)})', 'Save config (${_extensionDirtyCount(detail)})'),
+              ),
+            ],
+          ),
+      ]),
+      _surface(
+        eyebrow: _tr('声明信息', 'Declaration'),
+        title: _tr('工具、触发器与权限', 'Tools, Triggers and Permissions'),
+        copy: '',
+        children: [
+          _codeBlock(_tr('工具', 'Tools'), toolsText),
+          _codeBlock(_tr('触发器', 'Triggers'), triggersText),
+          _codeBlock(_tr('权限', 'Permissions'), permissionsText),
+          if ((detail?.runtime.scriptPath ?? extension.runtimeScriptPath) != null)
+            _codeBlock(
+              _tr('运行时脚本', 'Runtime script'),
+              detail?.runtime.scriptPath ?? extension.runtimeScriptPath ?? '',
+            ),
+          if (extension.localPath.isNotEmpty) _codeBlock(_tr('本地路径', 'Local path'), extension.localPath),
+        ],
+      ),
+      if (detail == null && loading)
+        _loadingSurface(
+          _tr('正在加载 Extension 详情', 'Loading extension detail'),
+          _tr('读取配置状态、最近记录与定时触发运行结果。', 'Reading config state, recent records, and scheduler runs.'),
+          compact: true,
+        )
+      else if (detail != null) ...[
+        _surface(
+          eyebrow: _tr('配置', 'Configuration'),
+          title: _tr('Extension 配置与密钥', 'Extension settings and secrets'),
+          copy: _tr(
+            '机密字段不会回显。留空表示保持原样，点击“清除”后下次保存会删除它。',
+            'Secret values stay hidden. Leave them blank to keep the current value, or press Clear before saving to remove them.',
+          ),
+          children: [
+            if (detail.config.fields.isEmpty)
+              _emptySurface(
+                _tr('当前 Extension 未声明配置项', 'No declared config fields'),
+                _tr(
+                  '如果 Extension 需要 token、cookie 或开关，请在 manifest 的 config_schema 中声明。',
+                  'Declare config_schema fields in the manifest if the extension needs tokens, cookies, or toggles.',
+                ),
+                compact: true,
+              )
+            else
+              div(classes: 'dashboard-column', [
+                for (final field in detail.config.fields) _buildExtensionConfigField(detail, field),
+              ]),
+            if (detail.config.unknownKeys.isNotEmpty)
+              _codeBlock(
+                _tr('未声明但已存储的键', 'Stored undeclared keys'),
+                detail.config.unknownKeys.join('\n'),
+              ),
+          ],
+        ),
+        _surface(
+          eyebrow: _tr('活动记录', 'Activity'),
+          title: _tr('最近摘要与定时状态', 'Recent summaries and scheduler state'),
+          copy: _tr(
+            '这里展示 Extension 自己写入数据库的记录，以及定时触发器最近一次运行结果。',
+            'Shows extension-owned database records and the latest scheduled-trigger run results.',
+          ),
+          children: [
+            if (detail.records.isEmpty)
+              _emptySurface(
+                _tr('暂无 Extension 记录', 'No extension records yet'),
+                _tr(
+                  '当 Extension 开始抓取、总结或缓存数据后，这里会出现内容。',
+                  'Records will appear here after the extension starts fetching, summarizing, or caching data.',
+                ),
+                compact: true,
+              )
+            else
+              div(classes: 'dashboard-column', [
+                for (final record in detail.records)
+                  div(classes: 'record-card', [
+                    div(classes: 'record-card__head', [
+                      span(classes: 'studio-status status-muted', [.text(record.recordType)]),
+                      span(classes: 'studio-status status-muted', [
+                        .text(record.title ?? record.recordKey ?? _tr('未命名', 'Untitled')),
+                      ]),
+                      span(classes: 'record-card__time', [.text(_timeLabel(record.updatedAt))]),
+                    ]),
+                    _copyBlock(record.contentPreview.isEmpty ? _tr('(空内容)', '(empty)') : record.contentPreview),
+                  ]),
+              ]),
+            if (detail.triggerRuns.isNotEmpty)
+              div(classes: 'studio-kv-list', [
+                for (final run in detail.triggerRuns)
+                  _kvRow(
+                    '${run.triggerName} / ${run.lastStatus}',
+                    run.lastRunAt == null ? _tr('尚未运行', 'Never run') : _timeLabel(run.lastRunAt),
+                  ),
+              ]),
+            if (detail.triggerRuns.any((run) => (run.lastError ?? '').isNotEmpty))
+              _codeBlock(
+                _tr('最近错误', 'Recent errors'),
+                detail.triggerRuns
+                    .where((run) => (run.lastError ?? '').isNotEmpty)
+                    .map((run) => '[${run.triggerName}] ${run.lastError}')
+                    .join('\n\n'),
+              ),
+          ],
+        ),
+      ],
     ]);
   }
 

@@ -4,6 +4,7 @@ from typing import Any
 from aiohttp import web
 
 from config.settings import settings
+from core.extensions import ExtensionInstallError
 from utils.logger import logger
 
 from .service import echogram_web_service
@@ -159,6 +160,82 @@ async def subscriptions(_request: web.Request) -> web.Response:
     return web.json_response(await echogram_web_service.get_subscriptions())
 
 
+async def extensions(_request: web.Request) -> web.Response:
+    return web.json_response(await echogram_web_service.get_extensions())
+
+
+async def extension_detail(request: web.Request) -> web.Response:
+    extension_id = (request.match_info.get("extension_id") or "").strip()
+    detail = await echogram_web_service.get_extension_detail(extension_id)
+    if not detail:
+        raise web.HTTPNotFound(reason="extension not found")
+    return web.json_response(detail)
+
+
+async def enable_extension(request: web.Request) -> web.Response:
+    extension_id = (request.match_info.get("extension_id") or "").strip()
+    detail = await echogram_web_service.set_extension_enabled(extension_id, enabled=True)
+    if not detail:
+        raise web.HTTPNotFound(reason="extension not found")
+    return web.json_response(detail)
+
+
+async def disable_extension(request: web.Request) -> web.Response:
+    extension_id = (request.match_info.get("extension_id") or "").strip()
+    detail = await echogram_web_service.set_extension_enabled(extension_id, enabled=False)
+    if not detail:
+        raise web.HTTPNotFound(reason="extension not found")
+    return web.json_response(detail)
+
+
+async def patch_extension_config(request: web.Request) -> web.Response:
+    extension_id = (request.match_info.get("extension_id") or "").strip()
+    payload: Any = await request.json()
+    if not isinstance(payload, dict):
+        raise web.HTTPBadRequest(reason="config payload must be an object")
+    try:
+        detail = await echogram_web_service.update_extension_config(extension_id, payload)
+    except ValueError as exc:
+        raise web.HTTPBadRequest(reason=str(exc)) from exc
+    if not detail:
+        raise web.HTTPNotFound(reason="extension not found")
+    return web.json_response(detail)
+
+
+async def install_extension(request: web.Request) -> web.Response:
+    try:
+        if request.content_type.startswith("multipart/"):
+            reader = await request.multipart()
+            payload: dict[str, Any] = {}
+            upload_filename: str | None = None
+            upload_bytes: bytes | None = None
+
+            async for part in reader:
+                if part.name == "file":
+                    upload_filename = part.filename
+                    upload_bytes = await part.read()
+                elif part.name:
+                    payload[part.name] = await part.text()
+
+            if upload_bytes is None:
+                raise web.HTTPBadRequest(reason="missing file upload")
+
+            result = await echogram_web_service.install_extension(
+                payload,
+                upload_filename=upload_filename,
+                upload_bytes=upload_bytes,
+            )
+            return web.json_response(result)
+
+        payload: Any = await request.json()
+        if not isinstance(payload, dict):
+            raise web.HTTPBadRequest(reason="install payload must be an object")
+        result = await echogram_web_service.install_extension(payload)
+        return web.json_response(result)
+    except ExtensionInstallError as exc:
+        raise web.HTTPBadRequest(reason=str(exc)) from exc
+
+
 def create_app() -> web.Application:
     app = web.Application(middlewares=[cors_middleware, error_middleware, auth_middleware])
     app.router.add_get("/api/health", health)
@@ -174,6 +251,12 @@ def create_app() -> web.Application:
     app.router.add_post("/api/chats/{chat_id}/rag/rebuild", rebuild_rag)
     app.router.add_get("/api/logs/recent", logs)
     app.router.add_get("/api/subscriptions", subscriptions)
+    app.router.add_get("/api/extensions", extensions)
+    app.router.add_get("/api/extensions/{extension_id}", extension_detail)
+    app.router.add_post("/api/extensions/{extension_id}/enable", enable_extension)
+    app.router.add_post("/api/extensions/{extension_id}/disable", disable_extension)
+    app.router.add_patch("/api/extensions/{extension_id}/config", patch_extension_config)
+    app.router.add_post("/api/extensions/install", install_extension)
     app.router.add_route("OPTIONS", "/{path_info:.*}", lambda _request: web.Response(status=204))
     return app
 

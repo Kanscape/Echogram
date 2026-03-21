@@ -6,3 +6,9 @@ from models.history import History
 from models.summary import ConversationSummary, UserSummary
 from models.news import NewsSubscription, ChatSubscription
 from models.rag_status import RagStatus
+from models.extension import (
+    ExtensionRecord,
+    ExtensionSetting,
+    ExtensionState,
+    ExtensionTriggerRun,
+)
